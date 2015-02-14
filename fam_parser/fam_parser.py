@@ -22,6 +22,7 @@ class FamParser(object):
         'FAMID': 1,
         'AUTHOR': 2,
     }
+    DEFAULT_DATE = '01-01-9999'
 
     def __init__(self):
         """
@@ -44,14 +45,31 @@ class FamParser(object):
 
     def _parse_date(self, date):
         """
+        Decode a date.
+
+        The date is encoded as an integer, representing the year followed by
+        the (zero padded) day of the year. This integer is stored in little
+        endian order.
+
+        Decoding is done as follows:
+        - Reverse the order of the bits.
+        - Convert the bits to ordinals.
+        - Interpret the list of ordinals as digits in base 256.
+
+        :arg str date: Binary encoded date.
+
+        :return object: Time object.
         """
         date_int = reduce(lambda x, y: x * 0x100 + y,
-            map(lambda x: ord(x), date[::-1]), 0)
-        return time.strptime(str(date_int), "%Y%j")
+            map(lambda x: ord(x), date[::-1]))
+        if date_int:
+            return time.strptime(str(date_int), '%Y%j')
+        return time.strptime(self.DEFAULT_DATE, '%d-%m-%Y')
 
 
     def read(self, input_handle):
         """
+        :arg stream input_handle: Open readable handle to a FAM file.
         """
         self.metadata['SOURCE'] = self._trim(input_handle.read(
             self.HEADER_OFFSET))
@@ -64,6 +82,7 @@ class FamParser(object):
 
     def write(self, output_handle):
         """
+        :arg stream output_handle: Open writable handle.
         """
         #for line, field in enumerate(self.fields):
         #    output_handle.write('{:3} {:3}: "{}" "{}"\n'.format(line,
@@ -73,6 +92,10 @@ class FamParser(object):
 
 def fam_parser(input_handle, output_handle):
     """
+    Main entry point.
+
+    :arg stream input_handle: Open readable handle to a FAM file.
+    :arg stream output_handle: Open writable handle.
     """
     parser = FamParser()
     parser.read(input_handle)
