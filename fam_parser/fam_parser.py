@@ -8,31 +8,67 @@ FAM parser.
 """
 
 import argparse
+import time
 
 
 class FamParser(object):
     """
     """
     FIELD_DELIMITER = chr(0x0d)
+    END_OF_STRING = chr(0x00)
+    HEADER_OFFSET = 0x1A
+    MAP = {
+        'FAMNAME': 0,
+        'FAMID': 1,
+        'AUTHOR': 2,
+    }
 
     def __init__(self):
         """
         """
+        self.data = ""
         self.fields = []
+        self.metadata = {}
+
+
+    def _trim(self, line):
+        return line.split(self.END_OF_STRING)[0]
+
+
+    def _parse_metadata(self):
+        """
+        """
+        for key in self.MAP:
+            self.metadata[key] = self._trim(self.fields[self.MAP[key]])
+
+
+    def _parse_date(self, date):
+        """
+        """
+        date_int = reduce(lambda x, y: x * 0x100 + y,
+            map(lambda x: ord(x), date[::-1]), 0)
+        return time.strptime(str(date_int), "%Y%j")
 
 
     def read(self, input_handle):
         """
         """
-        self.fields = input_handle.read().split(self.FIELD_DELIMITER)
+        self.metadata['SOURCE'] = self._trim(input_handle.read(
+            self.HEADER_OFFSET))
+        self.data = input_handle.read()
+        self.fields = self.data.split(self.FIELD_DELIMITER)
+        self._parse_metadata()
+        self.metadata['CREATED'] = self._parse_date(self.fields[11][:3])
+        self.metadata['UPDATED'] = self._parse_date(self.fields[11][4:7])
 
 
     def write(self, output_handle):
         """
         """
-        for field in self.fields:
-            output_handle.write('{:3}: "{}" "{}"\n'.format(len(field),
-                field, field.encode('hex')))
+        #for line, field in enumerate(self.fields):
+        #    output_handle.write('{:3} {:3}: "{}" "{}"\n'.format(line,
+        #        len(field), field, field.encode('hex')))
+        print self.metadata
 
 
 def fam_parser(input_handle, output_handle):
