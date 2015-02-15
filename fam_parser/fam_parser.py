@@ -8,7 +8,31 @@ FAM parser.
 """
 
 import argparse
+import collections
 import time
+
+PROBAND = ['NOT_A_PROBAND', 'ABOVE_LEFT', 'ABOVE_RIGHT', 'BELOW_LEFT',
+    'BELOW_RIGHT', 'LEFT', 'RIGHT']
+SEX = ['MALE', 'FEMALE', 'UNKNOWN']
+ANNOTATION_1 = { #collections.defaultdict(lambda: 'NONE', {
+    ('00000000', '00000000'): 'NONE',
+    ('00000010', '00000000'): 'NONE',
+    ('00000010', '00000001'): 'FILL',
+    ('00000011', '00000000'): 'DOT',
+    ('00000100', '00000000'): 'QUESTION',
+    ('00000101', '00000000'): 'RIGHT-UPPER',
+    ('00000110', '00000000'): 'RIGHT-LOWER',
+    ('00001000', '00000000'): 'LEFT-UPPER',
+    ('00000111', '00000000'): 'LEFT-LOWER',
+}#)
+ANNOTATION_2 = { #collections.defaultdict(lambda: 'NONE', {
+    '00000000': 'NONE',
+    '00000001': 'P',  
+    '00000100': 'SB', 
+    '00001011': 'BAR',
+    '00000010': 'UNBORN',
+    '00000011': 'ABORTED',
+}#)
 
 
 def _identity(data):
@@ -20,12 +44,11 @@ def _trim(data, delimiter=chr(0x00)):
 
 
 def _proband(data):
-    return ['NOT_A_PROBAND', 'ABOVE_LEFT', 'ABOVE_RIGHT', 'BELOW_LEFT',
-        'BELOW_RIGHT', 'LEFT', 'RIGHT'][ord(data)]
+    return PROBAND[ord(data)]
 
 
 def _sex(data):
-    return ['MALE', 'FEMALE', 'UNKNOWN'][ord(data)]
+    return SEX[ord(data)]
 
 
 def _raw(data):
@@ -33,7 +56,7 @@ def _raw(data):
 
 
 def _bit(data):
-    return '{0:04b}'.format(ord(data))
+    return '{0:08b}'.format(ord(data))
 
 def _date(data):
     """
@@ -144,17 +167,21 @@ class Family(object):
             self._set_field(member, '', 3, _raw)
 
         self._set_field(member, '', 4, _raw)
-        self._set_field(member, 'ANNOTATION_1', 1, _bit)
+        self._set_field(member, 'FLAGS_1', 1, _bit)
         self._set_field(member, '', 2, _raw)
         self._set_field(member, 'PROBAND', 1, _proband)
         self._set_field(member, 'X_COORDINATE', 1, ord)
         self._set_field(member, '', 1, _raw)
         self._set_field(member, 'Y_COORDINATE', 1, ord)
         self._set_field(member, '', 1, _raw)
-        self._set_field(member, 'ANNOTATION_2', 1, _bit)
+        self._set_field(member, 'FLAGS_2', 1, _bit)
         self._set_field(member, '', 26, _raw)
-        self._set_field(member, 'ANNOTATION_3', 1, _bit)
+        self._set_field(member, 'FLAGS_3', 1, _bit)
         self._set_field(member, '', 205, _raw)
+
+        member['ANNOTATION_1'] = ANNOTATION_1[(member['FLAGS_1'],
+            member['FLAGS_3'])]
+        member['ANNOTATION_2'] = ANNOTATION_2[(member['FLAGS_2'])]
 
         self.members.append(member)
 
