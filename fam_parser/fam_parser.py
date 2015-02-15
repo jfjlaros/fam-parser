@@ -8,31 +8,30 @@ FAM parser.
 """
 
 import argparse
-import collections
 import time
 
 PROBAND = ['NOT_A_PROBAND', 'ABOVE_LEFT', 'ABOVE_RIGHT', 'BELOW_LEFT',
     'BELOW_RIGHT', 'LEFT', 'RIGHT']
 SEX = ['MALE', 'FEMALE', 'UNKNOWN']
-ANNOTATION_1 = { #collections.defaultdict(lambda: 'NONE', {
+ANNOTATION_1 = {
     ('00000000', '00000000'): 'NONE',
-    ('00000010', '00000000'): 'NONE',
     ('00000010', '00000001'): 'FILL',
+    ('00000010', '00000000'): 'FILL2', # BAR in combination with P or SB?
     ('00000011', '00000000'): 'DOT',
     ('00000100', '00000000'): 'QUESTION',
     ('00000101', '00000000'): 'RIGHT-UPPER',
     ('00000110', '00000000'): 'RIGHT-LOWER',
     ('00001000', '00000000'): 'LEFT-UPPER',
     ('00000111', '00000000'): 'LEFT-LOWER',
-}#)
-ANNOTATION_2 = { #collections.defaultdict(lambda: 'NONE', {
+}
+ANNOTATION_2 = {
     '00000000': 'NONE',
     '00000001': 'P',  
     '00000100': 'SB', 
     '00001011': 'BAR',
     '00000010': 'UNBORN',
     '00000011': 'ABORTED',
-}#)
+}
 
 
 def _identity(data):
@@ -57,6 +56,15 @@ def _raw(data):
 
 def _bit(data):
     return '{0:08b}'.format(ord(data))
+
+
+def _comment(data):
+    return data.split(chr(0x09) + chr(0x03))
+
+
+def _text(data):
+    return data.split(chr(0x0b) + chr(0x0b))
+
 
 def _date(data):
     """
@@ -93,6 +101,8 @@ class Family(object):
         self.data = ""
         self.family_attributes = {}
         self.members = []
+        self.footer = {}
+        self.text = []
         self.offset = 0
 
 
@@ -135,13 +145,15 @@ class Family(object):
     def _parse_member(self):
         """
         """
+        # TODO: There seems to be support for more annotation (+/-).
         member = {}
         self._set_field(member, 'SURNAME', 0, _identity)
         self._set_field(member, '', 0, _raw)
         self._set_field(member, 'FORENAMES', 0, _identity)
         self._set_field(member, '', 0, _raw)
         self._set_field(member, 'MAIDEN_NAME', 0, _identity)
-        self._set_field(member, '', 12, _raw)
+        self._set_field(member, '', 11, _raw)
+        self._set_field(member, 'COMMENT', 0, _comment)
         self._set_field(member, 'DATE_OF_BIRTH', 3, _date)
         self._set_field(member, '', 1, _raw)
         self._set_field(member, 'DATE_OF_DEATH', 3, _date)
@@ -186,6 +198,35 @@ class Family(object):
         self.members.append(member)
 
 
+    def _parse_text(self):
+        """
+        """
+        # TODO: X and Y coordinates have more digits.
+        text = {}
+        self._set_field(text, 'TEXT', 0, _text)
+        self._set_field(text, '', 54, _raw)
+        self._set_field(text, 'X_COORDINATE', 1, ord)
+        self._set_field(text, '', 3, _raw)
+        self._set_field(text, 'Y_COORDINATE', 1, ord)
+        self._set_field(text, '', 7, _raw)
+
+        self.text.append(text)
+
+
+    def _parse_footer(self):
+        """
+        """
+        self._set_field(self.footer, '', 5, _raw)
+
+        for description in range(23):
+            self._set_field(self.footer, 'DESC_{0:02d}'.format(description), 0,
+                _identity)
+
+        self._set_field(self.footer, '', 44, _raw)
+        self._set_field(self.footer, 'NUMBER_OF_TEXT_FIELDS', 1, ord)
+        self._set_field(self.footer, '', 1, _raw)
+
+
     def _write_dictionary(self, dictionary, output_handle):
         """
         :arg dict dictionary: Dictionary to write.
@@ -205,16 +246,28 @@ class Family(object):
         for member in range(self.family_attributes['SIZE']):
             self._parse_member()
 
+        self._parse_footer()
+        for text in range(self.footer['NUMBER_OF_TEXT_FIELDS']):
+            self._parse_text()
+
 
     def write(self, output_handle):
         """
         :arg stream output_handle: Open writable handle.
         """
+        output_handle.write('--- FAMILY ---\n\n')
         self._write_dictionary(self.family_attributes, output_handle)
 
         for member in self.members:
-            output_handle.write('\n---\n\n')
+            output_handle.write('\n\n--- MEMBER ---\n\n')
             self._write_dictionary(member, output_handle)
+
+        output_handle.write('\n\n--- FOOTER ---\n\n')
+        self._write_dictionary(self.footer, output_handle)
+
+        for text in self.text:
+            output_handle.write('\n\n--- TEXT ---\n\n')
+            self._write_dictionary(text, output_handle)
 
 
 def fam_parser(input_handle, output_handle):
