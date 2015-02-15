@@ -13,4 +13,4 @@ Run Cyrillic:
 
 And start editing a pedigree. Use `xxd` and `watch` to find differences:
 
-    watch -n 1 --differences=permanent xxd pedigree.fam
+    watch --differences=permanent xxd pedigree.fam
