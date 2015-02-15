@@ -92,12 +92,11 @@ def _date(data):
     return 'UNKNOWN'
 
 
-class Family(object):
+class FamParser(object):
     """
+    FAM file parsing class.
     """
     def __init__(self):
-        """
-        """
         self.data = ""
         self.family_attributes = {}
         self.members = []
@@ -109,12 +108,16 @@ class Family(object):
     def _set_field(self, destination, name, size, function=_identity,
             delimiter=chr(0x0d)):
         """
+        Extract a field from {self.data} using either a fixed size, or a
+        delimiter. After reading, {self.offset} is set to the next field.
+
         :arg dict destination: Destination dictionary.
         :arg str name: Field name.
         :arg int size: Size of fixed size field.
         :arg function function: Conversion function.
         :arg str delimiter: Delimeter for variable size field.
         """
+        # TODO: Perhaps use the file handle instead of self.data.
         if size:
             field = self.data[self.offset:self.offset + size]
             self.offset += size
@@ -128,7 +131,9 @@ class Family(object):
 
     def _parse_family(self):
         """
+        Extract family information.
         """
+        # TODO: Move SOURCE field.
         self._set_field(self.family_attributes, 'SOURCE', 26, _trim)
         self._set_field(self.family_attributes, 'FAMILY_NAME', 0, _identity)
         self._set_field(self.family_attributes, 'FAMILY_ID', 0, _identity)
@@ -144,6 +149,7 @@ class Family(object):
 
     def _parse_member(self):
         """
+        Extract person information.
         """
         # TODO: There seems to be support for more annotation (+/-).
         member = {}
@@ -200,6 +206,7 @@ class Family(object):
 
     def _parse_text(self):
         """
+        Extract information from a text field.
         """
         # TODO: X and Y coordinates have more digits.
         text = {}
@@ -215,6 +222,7 @@ class Family(object):
 
     def _parse_footer(self):
         """
+        Extract information from the footer.
         """
         self._set_field(self.footer, '', 5, _raw)
 
@@ -229,6 +237,8 @@ class Family(object):
 
     def _write_dictionary(self, dictionary, output_handle):
         """
+        Write the content of a dictionary to a stream.
+
         :arg dict dictionary: Dictionary to write.
         :arg stream output_handle: Open writable handle.
         """
@@ -238,6 +248,8 @@ class Family(object):
 
     def read(self, input_handle):
         """
+        Read the FAM file and parse it.
+
         :arg stream input_handle: Open readable handle to a FAM file.
         """
         self.data = input_handle.read()
@@ -253,6 +265,8 @@ class Family(object):
 
     def write(self, output_handle):
         """
+        Write the parsed FAM file to a stream.
+
         :arg stream output_handle: Open writable handle.
         """
         output_handle.write('--- FAMILY ---\n\n')
@@ -277,7 +291,7 @@ def fam_parser(input_handle, output_handle):
     :arg stream input_handle: Open readable handle to a FAM file.
     :arg stream output_handle: Open writable handle.
     """
-    parser = Family()
+    parser = FamParser()
     parser.read(input_handle)
     parser.write(output_handle)
 
