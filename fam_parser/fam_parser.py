@@ -8,22 +8,29 @@ FAM parser.
 """
 
 import argparse
+import pprint
 import time
 
 
 END_OF_STRING = chr(0x00)
 DEFAULT_DATE = '01-01-9999'
+PROBAND_OPTIONS = ['NO', 'ABOVE_LEFT', 'ABOVE_RIGHT', 'BELOW_LEFT',
+    'BELOW_RIGHT', 'LEFT', 'RIGHT']
 
 
 def _identity(data):
     return data
 
 
-def _trim(line):
-    return line.split(END_OF_STRING)[0]
+def _trim(data):
+    return data.split(END_OF_STRING)[0]
 
 
-def _date(date):
+def _proband(data):
+    return PROBAND_OPTIONS[ord(data)]
+
+
+def _date(data):
     """
     Decode a date.
 
@@ -36,18 +43,29 @@ def _date(date):
     - Convert the bits to ordinals.
     - Interpret the list of ordinals as digits in base 256.
 
-    :arg str date: Binary encoded date.
+    :arg str data: Binary encoded date.
 
     :return object: Time object.
     """
     date_int = reduce(lambda x, y: x * 0x100 + y,
-        map(lambda x: ord(x), date[::-1]))
+        map(lambda x: ord(x), data[::-1]))
     if date_int:
         return time.strptime(str(date_int), '%Y%j')
     return time.strptime(DEFAULT_DATE, '%d-%m-%Y')
 
 
-class FamParser(object):
+class Person(object):
+    """
+    """
+    MAP = {
+        'SURNAME': (18, 19, None, _identity)
+    }
+
+    def __init__(self):
+        self.data = {}
+
+
+class Family(object):
     """
     """
     FIELD_DELIMITER = chr(0x0d)
@@ -56,9 +74,15 @@ class FamParser(object):
         'FAMNAME': (0, 0, None, _identity),
         'FAMID': (1, 0, None, _identity),
         'AUTHOR': (2, 0, None, _identity),
+        'SIZE': (3, 0, 1, ord),
+        'COMMENT': (10, 5, None, _identity),
         'CREATED': (11, 0, 3, _date),
         'UPDATED': (11, 4, 7, _date),
-        'SIZE': (3, 0, 1, ord),
+
+        'SURNAME': (18, 19, None, _identity),
+        'FORENAMES': (20, 0, None, _identity),
+        'ID': (36, 0, None, _identity),
+        'PROBAND': (39, 4, 5, _proband),
     }
 
     def __init__(self):
@@ -89,13 +113,16 @@ class FamParser(object):
 
 
     def write(self, output_handle):
+        pprint.pprint(self.metadata, stream=output_handle)
+
+
+    def dump(self, output_handle):
         """
         :arg stream output_handle: Open writable handle.
         """
         for line, field in enumerate(self.fields):
             output_handle.write('{:3} {:3}: "{}" "{}"\n'.format(line,
                 len(field), field, field.encode('hex')))
-        print self.metadata
 
 
 def fam_parser(input_handle, output_handle):
@@ -105,9 +132,11 @@ def fam_parser(input_handle, output_handle):
     :arg stream input_handle: Open readable handle to a FAM file.
     :arg stream output_handle: Open writable handle.
     """
-    parser = FamParser()
+    parser = Family()
     parser.read(input_handle)
     parser.write(output_handle)
+    output_handle.write('\n---\n\n')
+    parser.dump(output_handle)
 
 
 def main():
