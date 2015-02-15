@@ -11,6 +11,34 @@ import argparse
 import time
 
 
+def _identity(data):
+    return data
+
+
+def _date(date):
+    """
+    Decode a date.
+
+    The date is encoded as an integer, representing the year followed by
+    the (zero padded) day of the year. This integer is stored in little
+    endian order.
+
+    Decoding is done as follows:
+    - Reverse the order of the bits.
+    - Convert the bits to ordinals.
+    - Interpret the list of ordinals as digits in base 256.
+
+    :arg str date: Binary encoded date.
+
+    :return object: Time object.
+    """
+    date_int = reduce(lambda x, y: x * 0x100 + y,
+        map(lambda x: ord(x), date[::-1]))
+    if date_int:
+        return time.strptime(str(date_int), '%Y%j')
+    return time.strptime(self.DEFAULT_DATE, '%d-%m-%Y')
+
+
 class FamParser(object):
     """
     """
@@ -18,9 +46,12 @@ class FamParser(object):
     END_OF_STRING = chr(0x00)
     HEADER_OFFSET = 0x1A
     MAP = {
-        'FAMNAME': 0,
-        'FAMID': 1,
-        'AUTHOR': 2,
+        'FAMNAME': (0, 0, 0, _identity),
+        'FAMID': (1, 0, 0, _identity),
+        'AUTHOR': (2, 0, 0, _identity),
+        'CREATED': (11, 0, 3, _date),
+        'UPDATED': (11, 4, 7, _date),
+        'SIZE': (3, 0, 1, int),
     }
     DEFAULT_DATE = '01-01-9999'
 
@@ -40,31 +71,11 @@ class FamParser(object):
         """
         """
         for key in self.MAP:
-            self.metadata[key] = self._trim(self.fields[self.MAP[key]])
-
-
-    def _parse_date(self, date):
-        """
-        Decode a date.
-
-        The date is encoded as an integer, representing the year followed by
-        the (zero padded) day of the year. This integer is stored in little
-        endian order.
-
-        Decoding is done as follows:
-        - Reverse the order of the bits.
-        - Convert the bits to ordinals.
-        - Interpret the list of ordinals as digits in base 256.
-
-        :arg str date: Binary encoded date.
-
-        :return object: Time object.
-        """
-        date_int = reduce(lambda x, y: x * 0x100 + y,
-            map(lambda x: ord(x), date[::-1]))
-        if date_int:
-            return time.strptime(str(date_int), '%Y%j')
-        return time.strptime(self.DEFAULT_DATE, '%d-%m-%Y')
+            if self.MAP[key][2]:
+                self.metadata[key] = self._trim(self.fields[
+                    self.MAP[key][0]][self.MAP[key][1]:self.MAP[key][2]])
+            else:
+                self.metadata[key] = self._trim(self.fields[self.MAP[key][0]])
 
 
     def read(self, input_handle):
@@ -76,17 +87,17 @@ class FamParser(object):
         self.data = input_handle.read()
         self.fields = self.data.split(self.FIELD_DELIMITER)
         self._parse_metadata()
-        self.metadata['CREATED'] = self._parse_date(self.fields[11][:3])
-        self.metadata['UPDATED'] = self._parse_date(self.fields[11][4:7])
+        #self.metadata['CREATED'] = self._parse_date(self.fields[11][:3])
+        #self.metadata['UPDATED'] = self._parse_date(self.fields[11][4:7])
 
 
     def write(self, output_handle):
         """
         :arg stream output_handle: Open writable handle.
         """
-        #for line, field in enumerate(self.fields):
-        #    output_handle.write('{:3} {:3}: "{}" "{}"\n'.format(line,
-        #        len(field), field, field.encode('hex')))
+        for line, field in enumerate(self.fields):
+            output_handle.write('{:3} {:3}: "{}" "{}"\n'.format(line,
+                len(field), field, field.encode('hex')))
         print self.metadata
 
 
