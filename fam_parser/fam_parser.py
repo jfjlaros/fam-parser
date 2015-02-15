@@ -8,7 +8,6 @@ FAM parser.
 """
 
 import argparse
-import collections
 import time
 
 
@@ -28,10 +27,15 @@ def _proband(data):
 def _sex(data):
     return ['MALE', 'FEMALE', 'UNKNOWN'][ord(data)]
 
+
 def _raw(data):
     return data.encode('hex')
 
-def _date(data, default_date='01-01-9999'):
+
+def _bit(data):
+    return '{0:04b}'.format(ord(data))
+
+def _date(data):
     """
     Decode a date.
 
@@ -45,15 +49,16 @@ def _date(data, default_date='01-01-9999'):
     - Interpret the list of ordinals as digits in base 256.
 
     :arg str data: Binary encoded date.
-    :arg str default_date: Return value in case of missing date.
 
-    :return object: Time object.
+    :return object: Date in format %d-%m-%Y.
     """
     date_int = reduce(lambda x, y: x * 0x100 + y,
         map(lambda x: ord(x), data[::-1]))
+    if date_int == 0xFFFFFF:
+        return 'DEFINED'
     if date_int:
-        return time.strptime(str(date_int), '%Y%j')
-    return time.strptime(default_date, '%d-%m-%Y')
+        return time.strftime('%d-%m-%Y', time.strptime(str(date_int), '%Y%j'))
+    return 'UNKNOWN'
 
 
 class Family(object):
@@ -63,12 +68,15 @@ class Family(object):
         """
         """
         self.data = ""
-        self.attributes = collections.OrderedDict()
+        self.family_attributes = {}
+        self.members = []
         self.offset = 0
 
 
-    def _set_field(self, name, size, function=_identity, delimiter=chr(0x0d)):
+    def _set_field(self, destination, name, size, function=_identity,
+            delimiter=chr(0x0d)):
         """
+        :arg dict destination: Destination dictionary.
         :arg str name: Field name.
         :arg int size: Size of fixed size field.
         :arg function function: Conversion function.
@@ -82,7 +90,82 @@ class Family(object):
             self.offset += len(field) + 1
 
         if name:
-            self.attributes[name] = function(field)
+            destination[name] = function(field)
+
+
+    def _parse_family(self):
+        """
+        """
+        self._set_field(self.family_attributes, 'SOURCE', 26, _trim)
+        self._set_field(self.family_attributes, 'FAMILY_NAME', 0, _identity)
+        self._set_field(self.family_attributes, 'FAMILY_ID', 0, _identity)
+        self._set_field(self.family_attributes, 'AUTHOR', 0, _identity)
+        self._set_field(self.family_attributes, 'SIZE', 1, ord)
+        self._set_field(self.family_attributes, '', 45, _raw)
+        self._set_field(self.family_attributes, 'COMMENT', 0, _identity)
+        self._set_field(self.family_attributes, 'DATE_CREATED', 3, _date)
+        self._set_field(self.family_attributes, '', 1, _raw)
+        self._set_field(self.family_attributes, 'DATE_UPDATED', 3, _date)
+        self._set_field(self.family_attributes, '', 32, _raw)
+
+
+    def _parse_member(self):
+        """
+        """
+        member = {}
+        self._set_field(member, 'SURNAME', 0, _identity)
+        self._set_field(member, '', 0, _raw)
+        self._set_field(member, 'FORENAMES', 0, _identity)
+        self._set_field(member, '', 0, _raw)
+        self._set_field(member, 'MAIDEN_NAME', 0, _identity)
+        self._set_field(member, '', 12, _raw)
+        self._set_field(member, 'DATE_OF_BIRTH', 3, _date)
+        self._set_field(member, '', 1, _raw)
+        self._set_field(member, 'DATE_OF_DEATH', 3, _date)
+        self._set_field(member, '', 1, _raw)
+        self._set_field(member, 'SEX', 1, _sex)
+        self._set_field(member, 'ID', 1, ord)
+        self._set_field(member, '', 3, _raw)
+        self._set_field(member, 'MOTHER_ID', 1, ord)
+        self._set_field(member, '', 1, _raw)
+        self._set_field(member, 'FATHER_ID', 1, ord)
+        self._set_field(member, '', 1, _raw)
+        self._set_field(member, 'INTERNAL_ID', 1, ord)
+        self._set_field(member, '', 1, _raw)
+        self._set_field(member, 'NUMBER_OF_INDIVIDUALS', 1, ord)
+        self._set_field(member, '', 1, _raw)
+        self._set_field(member, 'AGE_GESTATION', 0, _identity)
+        self._set_field(member, 'INDIVIDUAL_ID', 0, _identity)
+        self._set_field(member, 'NUMBER_OF_SPOUSES', 1, ord)
+        self._set_field(member, '', 1, _raw)
+
+        for spouse in range(member['NUMBER_OF_SPOUSES']):
+            self._set_field(member, 'SPOUSE_{}_ID'.format(spouse), 1, ord)
+            self._set_field(member, '', 3, _raw)
+
+        self._set_field(member, '', 4, _raw)
+        self._set_field(member, 'ANNOTATION_1', 1, _bit)
+        self._set_field(member, '', 2, _raw)
+        self._set_field(member, 'PROBAND', 1, _proband)
+        self._set_field(member, 'X_COORDINATE', 1, ord)
+        self._set_field(member, '', 1, _raw)
+        self._set_field(member, 'Y_COORDINATE', 1, ord)
+        self._set_field(member, '', 1, _raw)
+        self._set_field(member, 'ANNOTATION_2', 1, _bit)
+        self._set_field(member, '', 26, _raw)
+        self._set_field(member, 'ANNOTATION_3', 1, _bit)
+        self._set_field(member, '', 205, _raw)
+
+        self.members.append(member)
+
+
+    def _write_dictionary(self, dictionary, output_handle):
+        """
+        :arg dict dictionary: Dictionary to write.
+        :arg stream output_handle: Open writable handle.
+        """
+        for key, value in sorted(dictionary.items()):
+            output_handle.write("{}: {}\n".format(key, value))
 
 
     def read(self, input_handle):
@@ -91,57 +174,20 @@ class Family(object):
         """
         self.data = input_handle.read()
 
-        self._set_field('SOURCE', 26, _trim),
-        self._set_field('FAMILY_NAME', 0, _identity),
-        self._set_field('FAMILY_ID', 0, _identity),
-        self._set_field('AUTHOR', 0, _identity),
-        self._set_field('SIZE', 1, ord),
-        self._set_field('', 45, _identity),
-        self._set_field('COMMENT', 0, _identity),
-        self._set_field('DATE_CREATED', 3, _date),
-        self._set_field('', 1, _identity),
-        self._set_field('DATE_UPDATED', 3, _date),
-        self._set_field('', 32, _identity),
-
-        self._set_field('SURNAME', 0, _identity),
-        self._set_field('', 0, _identity),
-        self._set_field('FORENAMES', 0, _identity),
-        self._set_field('', 0, _identity),
-        self._set_field('MAIDEN_NAME', 0, _identity),
-        self._set_field('', 12, _identity),
-        self._set_field('DATE_OF_BIRTH', 3, _date),
-        self._set_field('', 1, _identity),
-        self._set_field('DATE_OF_DEATH', 3, _date),
-        self._set_field('', 1, _identity),
-        self._set_field('SEX', 1, _sex),
-        self._set_field('', 4, _identity),
-        self._set_field('MOTHER_ID', 1, ord),
-        self._set_field('', 1, _identity),
-        self._set_field('FATHER_ID', 1, ord),
-        self._set_field('', 1, _identity),
-        self._set_field('INTERNAL_ID', 1, ord),
-        self._set_field('', 1, _identity),
-        self._set_field('NUMBER_OF_INDIVIDUALS', 1, ord),
-        self._set_field('', 1, _identity),
-        self._set_field('AGE_GESTATION', 0, _identity),
-        self._set_field('ID', 0, _identity),
-        self._set_field('NUMBER_OF_SPOUSES', 1, ord),
-        self._set_field('', 1, _identity),
-
-        for spouse in range(self.attributes['NUMBER_OF_SPOUSES']):
-            self._set_field(''.format(spouse), 4, _raw)
-
-        self._set_field('', 7, _identity),
-        self._set_field('PROBAND', 1, _proband),
-        self._set_field('X_COORDINATE', 1, ord),
-        self._set_field('', 1, _identity),
-        self._set_field('Y_COORDINATE', 1, ord),
-        self._set_field('_', 100, _raw),
+        self._parse_family()
+        for member in range(self.family_attributes['SIZE']):
+            self._parse_member()
 
 
     def write(self, output_handle):
-        for key, value in self.attributes.items():
-            output_handle.write("{}: {}\n".format(key, value))
+        """
+        :arg stream output_handle: Open writable handle.
+        """
+        self._write_dictionary(self.family_attributes, output_handle)
+
+        for member in self.members:
+            output_handle.write('\n---\n\n')
+            self._write_dictionary(member, output_handle)
 
 
 def fam_parser(input_handle, output_handle):
