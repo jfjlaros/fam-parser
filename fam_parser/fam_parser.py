@@ -14,7 +14,7 @@ import time
 
 END_OF_STRING = chr(0x00)
 DEFAULT_DATE = '01-01-9999'
-PROBAND_OPTIONS = ['NO', 'ABOVE_LEFT', 'ABOVE_RIGHT', 'BELOW_LEFT',
+PROBAND_OPTIONS = ['NOT_A_PROBAND', 'ABOVE_LEFT', 'ABOVE_RIGHT', 'BELOW_LEFT',
     'BELOW_RIGHT', 'LEFT', 'RIGHT']
 
 
@@ -81,6 +81,12 @@ class Family(object):
 
         'SURNAME': (18, 19, None, _identity),
         'FORENAMES': (20, 0, None, _identity),
+        'MAIDEN_NAME': (22, 0, None, _identity),
+        'DATE_OF_BIRTH': (35, 0, 3, _date),
+        'DATE_OF_DEATH': (35, 4, 7, _date),
+        'DATE_OF_DEATH': (35, 4, 7, _date),
+        'NUMBER_OF_INDIVIDUALS': (35, 19, 20, ord),
+        'AGE_GESTATION': (35, 21, None, _identity),
         'ID': (36, 0, None, _identity),
         'PROBAND': (39, 4, 5, _proband),
     }
