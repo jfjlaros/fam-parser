@@ -16,6 +16,7 @@ END_OF_STRING = chr(0x00)
 DEFAULT_DATE = '01-01-9999'
 PROBAND_OPTIONS = ['NOT_A_PROBAND', 'ABOVE_LEFT', 'ABOVE_RIGHT', 'BELOW_LEFT',
     'BELOW_RIGHT', 'LEFT', 'RIGHT']
+SEX = ['MALE', 'FEMALE', 'UNKNOWN']
 
 
 def _identity(data):
@@ -29,6 +30,9 @@ def _trim(data):
 def _proband(data):
     return PROBAND_OPTIONS[ord(data)]
 
+
+def _sex(data):
+    return SEX[ord(data)]
 
 def _date(data):
     """
@@ -84,11 +88,17 @@ class Family(object):
         'MAIDEN_NAME': (22, 0, None, _identity),
         'DATE_OF_BIRTH': (35, 0, 3, _date),
         'DATE_OF_DEATH': (35, 4, 7, _date),
-        'DATE_OF_DEATH': (35, 4, 7, _date),
+        'SEX': (35, 8, 9, _sex),
+        'MOTHER_ID': (35, 13, 14, ord),
+        'FATHER_ID': (35, 15, 16, ord),
+        'INTERNAL_ID': (35, 17, 18, ord),
         'NUMBER_OF_INDIVIDUALS': (35, 19, 20, ord),
         'AGE_GESTATION': (35, 21, None, _identity),
         'ID': (36, 0, None, _identity),
-        'PROBAND': (39, 4, 5, _proband),
+        'X_COORDINATE': (38, 5, 6, ord),
+        'Y_COORDINATE': (38, 7, 8, ord),
+        'PROBAND': (39, 4, 5, _proband)
+        # SPOUSE
     }
 
     def __init__(self):
@@ -97,6 +107,7 @@ class Family(object):
         self.data = ""
         self.fields = []
         self.metadata = {}
+        self.offset = 0
 
 
     def _parse_metadata(self):
