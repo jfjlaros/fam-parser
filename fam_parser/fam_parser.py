@@ -11,8 +11,16 @@ import argparse
 import time
 
 
+END_OF_STRING = chr(0x00)
+DEFAULT_DATE = '01-01-9999'
+
+
 def _identity(data):
     return data
+
+
+def _trim(line):
+    return line.split(END_OF_STRING)[0]
 
 
 def _date(date):
@@ -36,24 +44,22 @@ def _date(date):
         map(lambda x: ord(x), date[::-1]))
     if date_int:
         return time.strptime(str(date_int), '%Y%j')
-    return time.strptime(self.DEFAULT_DATE, '%d-%m-%Y')
+    return time.strptime(DEFAULT_DATE, '%d-%m-%Y')
 
 
 class FamParser(object):
     """
     """
     FIELD_DELIMITER = chr(0x0d)
-    END_OF_STRING = chr(0x00)
     HEADER_OFFSET = 0x1A
     MAP = {
-        'FAMNAME': (0, 0, 0, _identity),
-        'FAMID': (1, 0, 0, _identity),
-        'AUTHOR': (2, 0, 0, _identity),
+        'FAMNAME': (0, 0, None, _identity),
+        'FAMID': (1, 0, None, _identity),
+        'AUTHOR': (2, 0, None, _identity),
         'CREATED': (11, 0, 3, _date),
         'UPDATED': (11, 4, 7, _date),
-        'SIZE': (3, 0, 1, int),
+        'SIZE': (3, 0, 1, ord),
     }
-    DEFAULT_DATE = '01-01-9999'
 
     def __init__(self):
         """
@@ -63,32 +69,23 @@ class FamParser(object):
         self.metadata = {}
 
 
-    def _trim(self, line):
-        return line.split(self.END_OF_STRING)[0]
-
-
     def _parse_metadata(self):
         """
         """
-        for key in self.MAP:
-            if self.MAP[key][2]:
-                self.metadata[key] = self._trim(self.fields[
-                    self.MAP[key][0]][self.MAP[key][1]:self.MAP[key][2]])
-            else:
-                self.metadata[key] = self._trim(self.fields[self.MAP[key][0]])
+        for key, decode in self.MAP.items():
+            self.metadata[key] = decode[3](
+                self.fields[decode[0]][decode[1]:decode[2]])
 
 
     def read(self, input_handle):
         """
         :arg stream input_handle: Open readable handle to a FAM file.
         """
-        self.metadata['SOURCE'] = self._trim(input_handle.read(
+        self.metadata['SOURCE'] = _trim(input_handle.read(
             self.HEADER_OFFSET))
         self.data = input_handle.read()
         self.fields = self.data.split(self.FIELD_DELIMITER)
         self._parse_metadata()
-        #self.metadata['CREATED'] = self._parse_date(self.fields[11][:3])
-        #self.metadata['UPDATED'] = self._parse_date(self.fields[11][4:7])
 
 
     def write(self, output_handle):
