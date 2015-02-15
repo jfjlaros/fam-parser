@@ -8,33 +8,30 @@ FAM parser.
 """
 
 import argparse
-import pprint
+import collections
 import time
-
-
-END_OF_STRING = chr(0x00)
-DEFAULT_DATE = '01-01-9999'
-PROBAND_OPTIONS = ['NOT_A_PROBAND', 'ABOVE_LEFT', 'ABOVE_RIGHT', 'BELOW_LEFT',
-    'BELOW_RIGHT', 'LEFT', 'RIGHT']
-SEX = ['MALE', 'FEMALE', 'UNKNOWN']
 
 
 def _identity(data):
     return data
 
 
-def _trim(data):
-    return data.split(END_OF_STRING)[0]
+def _trim(data, delimiter=chr(0x00)):
+    return data.split(delimiter)[0]
 
 
 def _proband(data):
-    return PROBAND_OPTIONS[ord(data)]
+    return ['NOT_A_PROBAND', 'ABOVE_LEFT', 'ABOVE_RIGHT', 'BELOW_LEFT',
+        'BELOW_RIGHT', 'LEFT', 'RIGHT'][ord(data)]
 
 
 def _sex(data):
-    return SEX[ord(data)]
+    return ['MALE', 'FEMALE', 'UNKNOWN'][ord(data)]
 
-def _date(data):
+def _raw(data):
+    return data.encode('hex')
+
+def _date(data, default_date='01-01-9999'):
     """
     Decode a date.
 
@@ -48,6 +45,7 @@ def _date(data):
     - Interpret the list of ordinals as digits in base 256.
 
     :arg str data: Binary encoded date.
+    :arg str default_date: Return value in case of missing date.
 
     :return object: Time object.
     """
@@ -55,91 +53,95 @@ def _date(data):
         map(lambda x: ord(x), data[::-1]))
     if date_int:
         return time.strptime(str(date_int), '%Y%j')
-    return time.strptime(DEFAULT_DATE, '%d-%m-%Y')
-
-
-class Person(object):
-    """
-    """
-    MAP = {
-        'SURNAME': (18, 19, None, _identity)
-    }
-
-    def __init__(self):
-        self.data = {}
+    return time.strptime(default_date, '%d-%m-%Y')
 
 
 class Family(object):
     """
     """
-    FIELD_DELIMITER = chr(0x0d)
-    HEADER_OFFSET = 0x1A
-    MAP = {
-        'FAMNAME': (0, 0, None, _identity),
-        'FAMID': (1, 0, None, _identity),
-        'AUTHOR': (2, 0, None, _identity),
-        'SIZE': (3, 0, 1, ord),
-        'COMMENT': (10, 5, None, _identity),
-        'CREATED': (11, 0, 3, _date),
-        'UPDATED': (11, 4, 7, _date),
-
-        'SURNAME': (18, 19, None, _identity),
-        'FORENAMES': (20, 0, None, _identity),
-        'MAIDEN_NAME': (22, 0, None, _identity),
-        'DATE_OF_BIRTH': (35, 0, 3, _date),
-        'DATE_OF_DEATH': (35, 4, 7, _date),
-        'SEX': (35, 8, 9, _sex),
-        'MOTHER_ID': (35, 13, 14, ord),
-        'FATHER_ID': (35, 15, 16, ord),
-        'INTERNAL_ID': (35, 17, 18, ord),
-        'NUMBER_OF_INDIVIDUALS': (35, 19, 20, ord),
-        'AGE_GESTATION': (35, 21, None, _identity),
-        'ID': (36, 0, None, _identity),
-        'X_COORDINATE': (38, 5, 6, ord),
-        'Y_COORDINATE': (38, 7, 8, ord),
-        'PROBAND': (39, 4, 5, _proband)
-        # SPOUSE
-    }
-
     def __init__(self):
         """
         """
         self.data = ""
-        self.fields = []
-        self.metadata = {}
+        self.attributes = collections.OrderedDict()
         self.offset = 0
 
 
-    def _parse_metadata(self):
+    def _set_field(self, name, size, function=_identity, delimiter=chr(0x0d)):
         """
+        :arg str name: Field name.
+        :arg int size: Size of fixed size field.
+        :arg function function: Conversion function.
+        :arg str delimiter: Delimeter for variable size field.
         """
-        for key, decode in self.MAP.items():
-            self.metadata[key] = decode[3](
-                self.fields[decode[0]][decode[1]:decode[2]])
+        if size:
+            field = self.data[self.offset:self.offset + size]
+            self.offset += size
+        else:
+            field = self.data[self.offset:].split(delimiter)[0]
+            self.offset += len(field) + 1
+
+        if name:
+            self.attributes[name] = function(field)
 
 
     def read(self, input_handle):
         """
         :arg stream input_handle: Open readable handle to a FAM file.
         """
-        self.metadata['SOURCE'] = _trim(input_handle.read(
-            self.HEADER_OFFSET))
         self.data = input_handle.read()
-        self.fields = self.data.split(self.FIELD_DELIMITER)
-        self._parse_metadata()
+
+        self._set_field('SOURCE', 26, _trim),
+        self._set_field('FAMILY_NAME', 0, _identity),
+        self._set_field('FAMILY_ID', 0, _identity),
+        self._set_field('AUTHOR', 0, _identity),
+        self._set_field('SIZE', 1, ord),
+        self._set_field('', 45, _identity),
+        self._set_field('COMMENT', 0, _identity),
+        self._set_field('DATE_CREATED', 3, _date),
+        self._set_field('', 1, _identity),
+        self._set_field('DATE_UPDATED', 3, _date),
+        self._set_field('', 32, _identity),
+
+        self._set_field('SURNAME', 0, _identity),
+        self._set_field('', 0, _identity),
+        self._set_field('FORENAMES', 0, _identity),
+        self._set_field('', 0, _identity),
+        self._set_field('MAIDEN_NAME', 0, _identity),
+        self._set_field('', 12, _identity),
+        self._set_field('DATE_OF_BIRTH', 3, _date),
+        self._set_field('', 1, _identity),
+        self._set_field('DATE_OF_DEATH', 3, _date),
+        self._set_field('', 1, _identity),
+        self._set_field('SEX', 1, _sex),
+        self._set_field('', 4, _identity),
+        self._set_field('MOTHER_ID', 1, ord),
+        self._set_field('', 1, _identity),
+        self._set_field('FATHER_ID', 1, ord),
+        self._set_field('', 1, _identity),
+        self._set_field('INTERNAL_ID', 1, ord),
+        self._set_field('', 1, _identity),
+        self._set_field('NUMBER_OF_INDIVIDUALS', 1, ord),
+        self._set_field('', 1, _identity),
+        self._set_field('AGE_GESTATION', 0, _identity),
+        self._set_field('ID', 0, _identity),
+        self._set_field('NUMBER_OF_SPOUSES', 1, ord),
+        self._set_field('', 1, _identity),
+
+        for spouse in range(self.attributes['NUMBER_OF_SPOUSES']):
+            self._set_field(''.format(spouse), 4, _raw)
+
+        self._set_field('', 7, _identity),
+        self._set_field('PROBAND', 1, _proband),
+        self._set_field('X_COORDINATE', 1, ord),
+        self._set_field('', 1, _identity),
+        self._set_field('Y_COORDINATE', 1, ord),
+        self._set_field('_', 100, _raw),
 
 
     def write(self, output_handle):
-        pprint.pprint(self.metadata, stream=output_handle)
-
-
-    def dump(self, output_handle):
-        """
-        :arg stream output_handle: Open writable handle.
-        """
-        for line, field in enumerate(self.fields):
-            output_handle.write('{:3} {:3}: "{}" "{}"\n'.format(line,
-                len(field), field, field.encode('hex')))
+        for key, value in self.attributes.items():
+            output_handle.write("{}: {}\n".format(key, value))
 
 
 def fam_parser(input_handle, output_handle):
@@ -152,8 +154,6 @@ def fam_parser(input_handle, output_handle):
     parser = Family()
     parser.read(input_handle)
     parser.write(output_handle)
-    output_handle.write('\n---\n\n')
-    parser.dump(output_handle)
 
 
 def main():
