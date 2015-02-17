@@ -89,7 +89,9 @@ def _date(data):
     if date_int == 0xFFFFFF:
         return 'DEFINED'
     if date_int:
-        return time.strftime('%d-%m-%Y', time.strptime(str(date_int), '%Y%j'))
+        # This is needed because strftime does not accept years before 1900.
+        date = time.strptime('{0:07d}'.format(date_int), '%Y%j')
+        return '{}-{}-{}'.format(date.tm_mday, date.tm_mon, date.tm_year)
     return 'UNKNOWN'
 
 
