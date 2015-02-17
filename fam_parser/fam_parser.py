@@ -8,6 +8,7 @@ FAM parser.
 """
 
 import argparse
+import collections
 import time
 
 PROBAND = ['NOT_A_PROBAND', 'ABOVE_LEFT', 'ABOVE_RIGHT', 'BELOW_LEFT',
@@ -96,13 +97,14 @@ class FamParser(object):
     """
     FAM file parsing class.
     """
-    def __init__(self):
+    def __init__(self, debug=False):
         self.data = ""
-        self.family_attributes = {}
-        self.members = []
-        self.footer = {}
-        self.text = []
         self.offset = 0
+        self.family_attributes = collections.defaultdict(int)
+        self.members = []
+        self.footer = collections.defaultdict(int)
+        self.text = []
+        self.debug = debug
 
 
     def _set_field(self, destination, name, size, function=_identity,
@@ -127,6 +129,10 @@ class FamParser(object):
 
         if name:
             destination[name] = function(field)
+        else:
+            destination['_RAW_{}'.format(
+                destination['_RAW_FIELDS'])] = function(field)
+            destination['_RAW_FIELDS'] += 1
 
 
     def _parse_family(self):
@@ -152,11 +158,11 @@ class FamParser(object):
         Extract person information.
         """
         # TODO: There seems to be support for more annotation (+/-).
-        member = {}
+        member = collections.defaultdict(int)
         self._set_field(member, 'SURNAME', 0, _identity)
-        self._set_field(member, '', 0, _raw)
+        self._set_field(member, '', 1, _raw)
         self._set_field(member, 'FORENAMES', 0, _identity)
-        self._set_field(member, '', 0, _raw)
+        self._set_field(member, '', 1, _raw)
         self._set_field(member, 'MAIDEN_NAME', 0, _identity)
         self._set_field(member, '', 11, _raw)
         self._set_field(member, 'COMMENT', 0, _comment)
@@ -209,7 +215,7 @@ class FamParser(object):
         Extract information from a text field.
         """
         # TODO: X and Y coordinates have more digits.
-        text = {}
+        text = collections.defaultdict(int)
         self._set_field(text, 'TEXT', 0, _text)
         self._set_field(text, '', 54, _raw)
         self._set_field(text, 'X_COORDINATE', 1, ord)
@@ -243,7 +249,8 @@ class FamParser(object):
         :arg stream output_handle: Open writable handle.
         """
         for key, value in sorted(dictionary.items()):
-            output_handle.write("{}: {}\n".format(key, value))
+            if self.debug or not key.startswith('_RAW_'):
+                output_handle.write("{}: {}\n".format(key, value))
 
 
     def read(self, input_handle):
@@ -284,14 +291,14 @@ class FamParser(object):
             self._write_dictionary(text, output_handle)
 
 
-def fam_parser(input_handle, output_handle):
+def fam_parser(input_handle, output_handle, debug=False):
     """
     Main entry point.
 
     :arg stream input_handle: Open readable handle to a FAM file.
     :arg stream output_handle: Open writable handle.
     """
-    parser = FamParser()
+    parser = FamParser(debug)
     parser.read(input_handle)
     parser.write(output_handle)
 
@@ -308,9 +315,11 @@ def main():
         help='input file in FAM format')
     parser.add_argument('output_handle', type=argparse.FileType('w'),
         help='output file')
+    parser.add_argument('-d', dest='debug', action='store_true',
+        help='enable debugging')
 
     args = parser.parse_args()
-    fam_parser(args.input_handle, args.output_handle)
+    fam_parser(args.input_handle, args.output_handle, args.debug)
 
 
 if __name__ == '__main__':
