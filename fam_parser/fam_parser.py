@@ -107,7 +107,7 @@ class FamParser(object):
         self.debug = debug
 
 
-    def _set_field(self, destination, name, size, function=_identity,
+    def _set_field(self, destination, size, name='', function=_identity,
             delimiter=chr(0x0d)):
         """
         Extract a field from {self.data} using either a fixed size, or a
@@ -129,9 +129,9 @@ class FamParser(object):
 
         if name:
             destination[name] = function(field)
-        else:
+        elif self.debug:
             destination['_RAW_{}'.format(
-                destination['_RAW_FIELDS'])] = function(field)
+                destination['_RAW_FIELDS'])] = _raw(field)
             destination['_RAW_FIELDS'] += 1
 
 
@@ -140,17 +140,17 @@ class FamParser(object):
         Extract family information.
         """
         # TODO: Move SOURCE field.
-        self._set_field(self.family_attributes, 'SOURCE', 26, _trim)
-        self._set_field(self.family_attributes, 'FAMILY_NAME', 0, _identity)
-        self._set_field(self.family_attributes, 'FAMILY_ID', 0, _identity)
-        self._set_field(self.family_attributes, 'AUTHOR', 0, _identity)
-        self._set_field(self.family_attributes, 'SIZE', 1, ord)
-        self._set_field(self.family_attributes, '', 45, _raw)
-        self._set_field(self.family_attributes, 'COMMENT', 0, _identity)
-        self._set_field(self.family_attributes, 'DATE_CREATED', 3, _date)
-        self._set_field(self.family_attributes, '', 1, _raw)
-        self._set_field(self.family_attributes, 'DATE_UPDATED', 3, _date)
-        self._set_field(self.family_attributes, '', 32, _raw)
+        self._set_field(self.family_attributes, 26, 'SOURCE', _trim)
+        self._set_field(self.family_attributes, 0, 'FAMILY_NAME')
+        self._set_field(self.family_attributes, 0, 'FAMILY_ID')
+        self._set_field(self.family_attributes, 0, 'AUTHOR')
+        self._set_field(self.family_attributes, 1, 'SIZE', ord)
+        self._set_field(self.family_attributes, 45)
+        self._set_field(self.family_attributes, 0, 'COMMENT')
+        self._set_field(self.family_attributes, 3, 'DATE_CREATED', _date)
+        self._set_field(self.family_attributes, 1)
+        self._set_field(self.family_attributes, 3, 'DATE_UPDATED', _date)
+        self._set_field(self.family_attributes, 32)
 
 
     def _parse_member(self):
@@ -159,49 +159,49 @@ class FamParser(object):
         """
         # TODO: There seems to be support for more annotation (+/-).
         member = collections.defaultdict(int)
-        self._set_field(member, 'SURNAME', 0, _identity)
-        self._set_field(member, '', 1, _raw)
-        self._set_field(member, 'FORENAMES', 0, _identity)
-        self._set_field(member, '', 1, _raw)
-        self._set_field(member, 'MAIDEN_NAME', 0, _identity)
-        self._set_field(member, '', 11, _raw)
-        self._set_field(member, 'COMMENT', 0, _comment)
-        self._set_field(member, 'DATE_OF_BIRTH', 3, _date)
-        self._set_field(member, '', 1, _raw)
-        self._set_field(member, 'DATE_OF_DEATH', 3, _date)
-        self._set_field(member, '', 1, _raw)
-        self._set_field(member, 'SEX', 1, _sex)
-        self._set_field(member, 'ID', 1, ord)
-        self._set_field(member, '', 3, _raw)
-        self._set_field(member, 'MOTHER_ID', 1, ord)
-        self._set_field(member, '', 1, _raw)
-        self._set_field(member, 'FATHER_ID', 1, ord)
-        self._set_field(member, '', 1, _raw)
-        self._set_field(member, 'INTERNAL_ID', 1, ord)
-        self._set_field(member, '', 1, _raw)
-        self._set_field(member, 'NUMBER_OF_INDIVIDUALS', 1, ord)
-        self._set_field(member, '', 1, _raw)
-        self._set_field(member, 'AGE_GESTATION', 0, _identity)
-        self._set_field(member, 'INDIVIDUAL_ID', 0, _identity)
-        self._set_field(member, 'NUMBER_OF_SPOUSES', 1, ord)
-        self._set_field(member, '', 1, _raw)
+        self._set_field(member, 0, 'SURNAME')
+        self._set_field(member, 1)
+        self._set_field(member, 0, 'FORENAMES')
+        self._set_field(member, 1)
+        self._set_field(member, 0, 'MAIDEN_NAME')
+        self._set_field(member, 11)
+        self._set_field(member, 0, 'COMMENT', _comment)
+        self._set_field(member, 3, 'DATE_OF_BIRTH', _date)
+        self._set_field(member, 1)
+        self._set_field(member, 3, 'DATE_OF_DEATH', _date)
+        self._set_field(member, 1)
+        self._set_field(member, 1, 'SEX', _sex)
+        self._set_field(member, 1, 'ID', ord)
+        self._set_field(member, 3)
+        self._set_field(member, 1, 'MOTHER_ID', ord)
+        self._set_field(member, 1)
+        self._set_field(member, 1, 'FATHER_ID', ord)
+        self._set_field(member, 1)
+        self._set_field(member, 1, 'INTERNAL_ID', ord)
+        self._set_field(member, 1)
+        self._set_field(member, 1, 'NUMBER_OF_INDIVIDUALS', ord)
+        self._set_field(member, 1)
+        self._set_field(member, 0, 'AGE_GESTATION')
+        self._set_field(member, 0, 'INDIVIDUAL_ID')
+        self._set_field(member, 1, 'NUMBER_OF_SPOUSES', ord)
+        self._set_field(member, 1)
 
         for spouse in range(member['NUMBER_OF_SPOUSES']):
-            self._set_field(member, 'SPOUSE_{}_ID'.format(spouse), 1, ord)
-            self._set_field(member, '', 3, _raw)
+            self._set_field(member, 1, 'SPOUSE_{}_ID'.format(spouse), ord)
+            self._set_field(member, 3)
 
-        self._set_field(member, '', 4, _raw)
-        self._set_field(member, 'FLAGS_1', 1, _bit)
-        self._set_field(member, '', 2, _raw)
-        self._set_field(member, 'PROBAND', 1, _proband)
-        self._set_field(member, 'X_COORDINATE', 1, ord)
-        self._set_field(member, '', 1, _raw)
-        self._set_field(member, 'Y_COORDINATE', 1, ord)
-        self._set_field(member, '', 1, _raw)
-        self._set_field(member, 'FLAGS_2', 1, _bit)
-        self._set_field(member, '', 26, _raw)
-        self._set_field(member, 'FLAGS_3', 1, _bit)
-        self._set_field(member, '', 205, _raw)
+        self._set_field(member, 4)
+        self._set_field(member, 1, 'FLAGS_1', _bit)
+        self._set_field(member, 2)
+        self._set_field(member, 1, 'PROBAND', _proband)
+        self._set_field(member, 1, 'X_COORDINATE', ord)
+        self._set_field(member, 1)
+        self._set_field(member, 1, 'Y_COORDINATE', ord)
+        self._set_field(member, 1)
+        self._set_field(member, 1, 'FLAGS_2', _bit)
+        self._set_field(member, 26)
+        self._set_field(member, 1, 'FLAGS_3', _bit)
+        self._set_field(member, 205)
 
         member['ANNOTATION_1'] = ANNOTATION_1[(member['FLAGS_1'],
             member['FLAGS_3'])]
@@ -216,12 +216,12 @@ class FamParser(object):
         """
         # TODO: X and Y coordinates have more digits.
         text = collections.defaultdict(int)
-        self._set_field(text, 'TEXT', 0, _text)
-        self._set_field(text, '', 54, _raw)
-        self._set_field(text, 'X_COORDINATE', 1, ord)
-        self._set_field(text, '', 3, _raw)
-        self._set_field(text, 'Y_COORDINATE', 1, ord)
-        self._set_field(text, '', 7, _raw)
+        self._set_field(text, 0, 'TEXT', _text)
+        self._set_field(text, 54)
+        self._set_field(text, 1, 'X_COORDINATE', ord)
+        self._set_field(text, 3)
+        self._set_field(text, 1, 'Y_COORDINATE', ord)
+        self._set_field(text, 7)
 
         self.text.append(text)
 
@@ -230,15 +230,15 @@ class FamParser(object):
         """
         Extract information from the footer.
         """
-        self._set_field(self.footer, '', 5, _raw)
+        self._set_field(self.footer, 5)
 
         for description in range(23):
-            self._set_field(self.footer, 'DESC_{0:02d}'.format(description), 0,
+            self._set_field(self.footer, 0, 'DESC_{0:02d}'.format(description),
                 _identity)
 
-        self._set_field(self.footer, '', 44, _raw)
-        self._set_field(self.footer, 'NUMBER_OF_TEXT_FIELDS', 1, ord)
-        self._set_field(self.footer, '', 1, _raw)
+        self._set_field(self.footer, 44)
+        self._set_field(self.footer, 1, 'NUMBER_OF_TEXT_FIELDS', ord)
+        self._set_field(self.footer, 1)
 
 
     def _write_dictionary(self, dictionary, output_handle):
@@ -249,8 +249,7 @@ class FamParser(object):
         :arg stream output_handle: Open writable handle.
         """
         for key, value in sorted(dictionary.items()):
-            if self.debug or not key.startswith('_RAW_'):
-                output_handle.write("{}: {}\n".format(key, value))
+            output_handle.write("{}: {}\n".format(key, value))
 
 
     def read(self, input_handle):
