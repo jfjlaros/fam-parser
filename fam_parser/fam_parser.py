@@ -103,6 +103,7 @@ class FamParser(object):
         self.data = ""
         self.offset = 0
         self.family_attributes = collections.defaultdict(int)
+        self.metadata = collections.defaultdict(int)
         self.members = []
         self.footer = collections.defaultdict(int)
         self.text = []
@@ -132,7 +133,7 @@ class FamParser(object):
         if name:
             destination[name] = function(field)
         elif self.debug:
-            destination['_RAW_{}'.format(
+            destination['_RAW_{0:02d}'.format(
                 destination['_RAW_FIELDS'])] = _raw(field)
             destination['_RAW_FIELDS'] += 1
 
