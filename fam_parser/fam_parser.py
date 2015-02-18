@@ -33,6 +33,10 @@ ANNOTATION_2 = {
     '00000010': 'UNBORN',
     '00000011': 'ABORTED',
 }
+RELATIONSHIP = {
+    0b00000100: 'SEPARATED',
+    0b00001000: 'DIVORCED',
+}
 
 
 def _identity(data):
@@ -51,6 +55,12 @@ def _sex(data):
     return SEX[ord(data)]
 
 
+def _relation(data):
+    for relation in RELATIONSHIP:
+        if data & relation:
+            return RELATIONSHIP[data]
+    return 'NORMAL'
+
 def _raw(data):
     return data.encode('hex')
 
@@ -66,9 +76,11 @@ def _comment(data):
 def _text(data):
     return data.split(chr(0x0b) + chr(0x0b))
 
+
 def _int(data):
     return reduce(lambda x, y: x * 0x100 + y,
         map(lambda x: ord(x), data[::-1]))
+
 
 def _date(data):
     """
@@ -197,7 +209,19 @@ class FamParser(object):
 
         for spouse in range(member['NUMBER_OF_SPOUSES']):
             self._set_field(member, 1, 'SPOUSE_{}_ID'.format(spouse), ord)
-            self._set_field(member, 3)
+            self._set_field(member, 1)
+            self._set_field(member, 1,
+                'SPOUSE_{}_RELATION_FLAGS'.format(spouse), ord)
+            self._set_field(member, 0,
+                'SPOUSE_{}_RELATION_NAME'.format(spouse))
+
+            relation_flags = member['SPOUSE_{}_RELATION_FLAGS'.format(spouse)]
+            member['SPOUSE_{}_RELATION_STATUS'.format(spouse)] = \
+                _relation(relation_flags)
+            member['SPOUSE_{}_RELATION_IS_INFORMAL'.format(spouse)] = \
+                str(bool(relation_flags & 0b000001))
+            member['SPOUSE_{}_RELATION_IS_CONSANGUINEOUS'.format(spouse)] = \
+                str(bool(relation_flags & 0b000010))
 
         self._set_field(member, 4)
         self._set_field(member, 1, 'FLAGS_1', _bit)
