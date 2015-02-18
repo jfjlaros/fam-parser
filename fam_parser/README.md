@@ -31,7 +31,7 @@ Now you can give the unnamed field a name so you can inspect its content.
 
     while true; do
       watch --differences=permanent \
-        "python fam_parser.py pedigree.fam - | head -100 | tail -50"
+        "python fam_parser.py -d pedigree.fam - | tail -100 | head -50"
     done
 
 Vary the values for `head` and `tail` to focus on the part of the output you
