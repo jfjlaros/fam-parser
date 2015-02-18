@@ -66,6 +66,9 @@ def _comment(data):
 def _text(data):
     return data.split(chr(0x0b) + chr(0x0b))
 
+def _int(data):
+    return reduce(lambda x, y: x * 0x100 + y,
+        map(lambda x: ord(x), data[::-1]))
 
 def _date(data):
     """
@@ -84,14 +87,15 @@ def _date(data):
 
     :return object: Date in format %d-%m-%Y.
     """
-    date_int = reduce(lambda x, y: x * 0x100 + y,
-        map(lambda x: ord(x), data[::-1]))
-    if date_int == 0xFFFFFF:
-        return 'DEFINED'
+    date_int = _int(data)
     if date_int:
+        if date_int == 0xFFFFFF:
+            return 'DEFINED'
+
         # This is needed because strftime does not accept years before 1900.
         date = time.strptime('{0:07d}'.format(date_int), '%Y%j')
         return '{}-{}-{}'.format(date.tm_mday, date.tm_mon, date.tm_year)
+
     return 'UNKNOWN'
 
 
@@ -147,13 +151,15 @@ class FamParser(object):
         self._set_field(self.family_attributes, 0, 'FAMILY_NAME')
         self._set_field(self.family_attributes, 0, 'FAMILY_ID')
         self._set_field(self.family_attributes, 0, 'AUTHOR')
-        self._set_field(self.family_attributes, 1, 'SIZE', ord)
+        self._set_field(self.family_attributes, 1, 'SIZE', _int)
         self._set_field(self.family_attributes, 45)
         self._set_field(self.family_attributes, 0, 'COMMENT')
         self._set_field(self.family_attributes, 3, 'DATE_CREATED', _date)
         self._set_field(self.family_attributes, 1)
         self._set_field(self.family_attributes, 3, 'DATE_UPDATED', _date)
-        self._set_field(self.family_attributes, 32)
+        self._set_field(self.family_attributes, 14)
+        self._set_field(self.family_attributes, 1, 'SELECTED_ID', ord)
+        self._set_field(self.family_attributes, 17)
 
 
     def _parse_member(self):
@@ -233,13 +239,25 @@ class FamParser(object):
         """
         Extract information from the footer.
         """
-        self._set_field(self.footer, 5)
+        self._set_field(self.footer, 3)
+        self._set_field(self.footer, 1, 'NUMBER_OF_CUSTOM_DESC', ord)
+        self._set_field(self.footer, 1)
 
         for description in range(23):
             self._set_field(self.footer, 0, 'DESC_{0:02d}'.format(description),
                 _identity)
 
-        self._set_field(self.footer, 44)
+        for description in range(self.footer['NUMBER_OF_CUSTOM_DESC']):
+            self._set_field(self.footer, 0,
+                'CUSTOM_DESC_{0:02d}'.format(description), _identity)
+            self._set_field(self.footer, 0,
+                'CUSTOM_CHAR_{0:02d}'.format(description), _identity)
+
+        self._set_field(self.footer, 14)
+        self._set_field(self.footer, 2, 'ZOOM', _int)
+        self._set_field(self.footer, 4, 'UNKNOWN_1', _raw) # Change with zoom.
+        self._set_field(self.footer, 4, 'UNKNOWN_2', _raw) # Change with zoom.
+        self._set_field(self.footer, 20)
         self._set_field(self.footer, 1, 'NUMBER_OF_TEXT_FIELDS', ord)
         self._set_field(self.footer, 1)
 
