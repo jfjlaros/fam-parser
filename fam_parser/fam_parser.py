@@ -11,6 +11,7 @@ import argparse
 import collections
 import time
 
+
 PROBAND = ['NOT_A_PROBAND', 'ABOVE_LEFT', 'ABOVE_RIGHT', 'BELOW_LEFT',
     'BELOW_RIGHT', 'LEFT', 'RIGHT']
 SEX = ['MALE', 'FEMALE', 'UNKNOWN']
@@ -124,6 +125,7 @@ class FamParser(object):
         self.footer = collections.defaultdict(int)
         self.text = []
         self.debug = debug
+        self.extracted = 0
 
 
     def _set_field(self, destination, size, name='', function=_identity,
@@ -141,17 +143,22 @@ class FamParser(object):
         # TODO: Perhaps use the file handle instead of self.data.
         if size:
             field = self.data[self.offset:self.offset + size]
-            self.offset += size
+            #self.offset += size
+            extracted = size
         else:
             field = self.data[self.offset:].split(delimiter)[0]
-            self.offset += len(field) + 1
+            #self.offset += len(field) + 1
+            extracted = len(field) + 1
 
         if name:
             destination[name] = function(field)
+            self.extracted += extracted
         elif self.debug:
             destination['_RAW_{0:02d}'.format(
                 destination['_RAW_FIELDS'])] = _raw(field)
             destination['_RAW_FIELDS'] += 1
+
+        self.offset += extracted
 
 
     def _parse_family(self):
@@ -219,9 +226,9 @@ class FamParser(object):
             member['SPOUSE_{}_RELATION_STATUS'.format(spouse)] = \
                 _relation(relation_flags)
             member['SPOUSE_{}_RELATION_IS_INFORMAL'.format(spouse)] = \
-                str(bool(relation_flags & 0b000001))
+                str(bool(relation_flags & 0b00000001))
             member['SPOUSE_{}_RELATION_IS_CONSANGUINEOUS'.format(spouse)] = \
-                str(bool(relation_flags & 0b000010))
+                str(bool(relation_flags & 0b00000010))
 
         self._set_field(member, 4)
         self._set_field(member, 1, 'FLAGS_1', _bit)
@@ -333,6 +340,13 @@ class FamParser(object):
         for text in self.text:
             output_handle.write('\n\n--- TEXT ---\n\n')
             self._write_dictionary(text, output_handle)
+
+        if self.debug:
+            output_handle.write('\n\n--- DEBUG INFO ---\n\n')
+            output_handle.write(
+                'Extracted {}/{} bits ({}%).\n'.format(
+                self.extracted, len(self.data),
+                self.extracted * 100 // len(self.data)))
 
 
 def fam_parser(input_handle, output_handle, debug=False):
