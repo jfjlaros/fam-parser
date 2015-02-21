@@ -6,11 +6,13 @@ FAM parser.
 
 (C) 2015 Jeroen F.J. Laros <J.F.J.Laros@lumc.nl>
 """
+# NOTE: all IDs are probably 2 bytes.
 
 import argparse
 import time
 
 import container
+
 
 PROBAND = ['NOT_A_PROBAND', 'ABOVE_LEFT', 'ABOVE_RIGHT', 'BELOW_LEFT',
     'BELOW_RIGHT', 'LEFT', 'RIGHT']
@@ -62,6 +64,7 @@ def _relation(data):
             return RELATIONSHIP[data]
     return 'NORMAL'
 
+
 def _raw(data):
     return data.encode('hex')
 
@@ -79,6 +82,18 @@ def _text(data):
 
 
 def _int(data):
+    """
+    Decode a little-endian encoded integer.
+
+    Decoding is done as follows:
+    - Reverse the order of the bits.
+    - Convert the bits to ordinals.
+    - Interpret the list of ordinals as digits in base 256.
+
+    :arg str data: Little-endian encoded integer.
+
+    :return int: Integer representation of {data}
+    """
     return reduce(lambda x, y: x * 0x100 + y,
         map(lambda x: ord(x), data[::-1]))
 
@@ -88,17 +103,11 @@ def _date(data):
     Decode a date.
 
     The date is encoded as an integer, representing the year followed by
-    the (zero padded) day of the year. This integer is stored in little
-    endian order.
-
-    Decoding is done as follows:
-    - Reverse the order of the bits.
-    - Convert the bits to ordinals.
-    - Interpret the list of ordinals as digits in base 256.
+    the (zero padded) day of the year.
 
     :arg str data: Binary encoded date.
 
-    :return object: Date in format %d-%m-%Y.
+    :return str: Date in format '%d-%m-%Y', 'DEFINED' or 'UNKNOWN'.
     """
     date_int = _int(data)
     if date_int:
@@ -119,11 +128,9 @@ class FamParser(object):
     def __init__(self, debug=False):
         self.data = ""
         self.offset = 0
-        self.family_attributes = container.Container()
         self.metadata = container.Container()
         self.members = []
         self.relationships = container.Container()
-        self.footer = container.Container()
         self.text = []
         self.debug = debug
         self.extracted = 0
@@ -160,32 +167,29 @@ class FamParser(object):
         self.offset += extracted
 
 
-    def _parse_family(self):
+    def _parse_header(self):
         """
-        Extract family information.
+        Extract header information.
         """
-        # TODO: Move SOURCE field.
-        # NOTE: SIZE and SELECTED_ID are probably 2 bytes.
-        self._set_field(self.family_attributes, 26, 'SOURCE', _trim)
-        self._set_field(self.family_attributes, 0, 'FAMILY_NAME')
-        self._set_field(self.family_attributes, 0, 'FAMILY_ID')
-        self._set_field(self.family_attributes, 0, 'AUTHOR')
-        self._set_field(self.family_attributes, 1, 'SIZE', _int)
-        self._set_field(self.family_attributes, 45)
-        self._set_field(self.family_attributes, 0, 'COMMENT')
-        self._set_field(self.family_attributes, 3, 'DATE_CREATED', _date)
-        self._set_field(self.family_attributes, 1)
-        self._set_field(self.family_attributes, 3, 'DATE_UPDATED', _date)
-        self._set_field(self.family_attributes, 14)
-        self._set_field(self.family_attributes, 1, 'SELECTED_ID', _int)
-        self._set_field(self.family_attributes, 17)
+        self._set_field(self.metadata, 26, 'SOURCE', _trim)
+        self._set_field(self.metadata, 0, 'FAMILY_NAME')
+        self._set_field(self.metadata, 0, 'FAMILY_ID')
+        self._set_field(self.metadata, 0, 'AUTHOR')
+        self._set_field(self.metadata, 1, 'SIZE', _int)
+        self._set_field(self.metadata, 45)
+        self._set_field(self.metadata, 0, 'COMMENT')
+        self._set_field(self.metadata, 3, 'DATE_CREATED', _date)
+        self._set_field(self.metadata, 1)
+        self._set_field(self.metadata, 3, 'DATE_UPDATED', _date)
+        self._set_field(self.metadata, 14)
+        self._set_field(self.metadata, 1, 'SELECTED_ID', _int)
+        self._set_field(self.metadata, 17)
 
 
     def _parse_relationship(self, person_id):
         """
         Extract relationship information.
         """
-        # NOTE: all IDs are probably 2 bytes.
         relationship = container.Container()
 
         relationship['MEMBER_1_ID'] = person_id
@@ -211,7 +215,6 @@ class FamParser(object):
         Extract person information.
         """
         # TODO: There seems to be support for more annotation (+/-).
-        # NOTE: all IDs are probably 2 bytes.
         member = container.Container()
 
         self._set_field(member, 0, 'SURNAME')
@@ -285,27 +288,27 @@ class FamParser(object):
         """
         Extract information from the footer.
         """
-        self._set_field(self.footer, 3)
-        self._set_field(self.footer, 1, 'NUMBER_OF_CUSTOM_DESC', _int)
-        self._set_field(self.footer, 1)
+        self._set_field(self.metadata, 3)
+        self._set_field(self.metadata, 1, 'NUMBER_OF_CUSTOM_DESC', _int)
+        self._set_field(self.metadata, 1)
 
         for description in range(23):
-            self._set_field(self.footer, 0, 'DESC_{0:02d}'.format(description),
-                _identity)
+            self._set_field(self.metadata, 0,
+                'DESC_{0:02d}'.format(description), _identity)
 
-        for description in range(self.footer['NUMBER_OF_CUSTOM_DESC']):
-            self._set_field(self.footer, 0,
+        for description in range(self.metadata['NUMBER_OF_CUSTOM_DESC']):
+            self._set_field(self.metadata, 0,
                 'CUSTOM_DESC_{0:02d}'.format(description), _identity)
-            self._set_field(self.footer, 0,
+            self._set_field(self.metadata, 0,
                 'CUSTOM_CHAR_{0:02d}'.format(description), _identity)
 
-        self._set_field(self.footer, 14)
-        self._set_field(self.footer, 2, 'ZOOM', _int)
-        self._set_field(self.footer, 4, 'UNKNOWN_1', _raw) # Change with zoom.
-        self._set_field(self.footer, 4, 'UNKNOWN_2', _raw) # Change with zoom.
-        self._set_field(self.footer, 20)
-        self._set_field(self.footer, 1, 'NUMBER_OF_TEXT_FIELDS', _int)
-        self._set_field(self.footer, 1)
+        self._set_field(self.metadata, 14)
+        self._set_field(self.metadata, 2, 'ZOOM', _int)
+        self._set_field(self.metadata, 4, 'UNKNOWN_1', _raw) # Zoom.
+        self._set_field(self.metadata, 4, 'UNKNOWN_2', _raw) # Zoom.
+        self._set_field(self.metadata, 20)
+        self._set_field(self.metadata, 1, 'NUMBER_OF_TEXT_FIELDS', _int)
+        self._set_field(self.metadata, 1)
 
 
     def _write_dictionary(self, dictionary, output_handle):
@@ -327,12 +330,12 @@ class FamParser(object):
         """
         self.data = input_handle.read()
 
-        self._parse_family()
-        for member in range(self.family_attributes['SIZE']):
+        self._parse_header()
+        for member in range(self.metadata['SIZE']):
             self._parse_member()
 
         self._parse_footer()
-        for text in range(self.footer['NUMBER_OF_TEXT_FIELDS']):
+        for text in range(self.metadata['NUMBER_OF_TEXT_FIELDS']):
             self._parse_text()
 
 
@@ -342,8 +345,8 @@ class FamParser(object):
 
         :arg stream output_handle: Open writable handle.
         """
-        output_handle.write('--- FAMILY ---\n\n')
-        self._write_dictionary(self.family_attributes, output_handle)
+        output_handle.write('--- METADATA ---\n\n')
+        self._write_dictionary(self.metadata, output_handle)
 
         for member in self.members:
             output_handle.write('\n\n--- MEMBER ---\n\n')
@@ -352,9 +355,6 @@ class FamParser(object):
         for relationship in self.relationships.values():
             output_handle.write('\n\n--- RELATIONSHIP ---\n\n')
             self._write_dictionary(relationship, output_handle)
-
-        output_handle.write('\n\n--- FOOTER ---\n\n')
-        self._write_dictionary(self.footer, output_handle)
 
         for text in self.text:
             output_handle.write('\n\n--- TEXT ---\n\n')
