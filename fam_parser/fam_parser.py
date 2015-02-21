@@ -8,9 +8,9 @@ FAM parser.
 """
 
 import argparse
-import collections
 import time
 
+import container
 
 PROBAND = ['NOT_A_PROBAND', 'ABOVE_LEFT', 'ABOVE_RIGHT', 'BELOW_LEFT',
     'BELOW_RIGHT', 'LEFT', 'RIGHT']
@@ -119,10 +119,10 @@ class FamParser(object):
     def __init__(self, debug=False):
         self.data = ""
         self.offset = 0
-        self.family_attributes = collections.defaultdict(int)
-        self.metadata = collections.defaultdict(int)
+        self.family_attributes = container.Container()
+        self.metadata = container.Container()
         self.members = []
-        self.footer = collections.defaultdict(int)
+        self.footer = container.Container()
         self.text = []
         self.debug = debug
         self.extracted = 0
@@ -143,11 +143,9 @@ class FamParser(object):
         # TODO: Perhaps use the file handle instead of self.data.
         if size:
             field = self.data[self.offset:self.offset + size]
-            #self.offset += size
             extracted = size
         else:
             field = self.data[self.offset:].split(delimiter)[0]
-            #self.offset += len(field) + 1
             extracted = len(field) + 1
 
         if name:
@@ -166,6 +164,7 @@ class FamParser(object):
         Extract family information.
         """
         # TODO: Move SOURCE field.
+        # NOTE: SIZE and SELECTED_ID are probably 2 bytes.
         self._set_field(self.family_attributes, 26, 'SOURCE', _trim)
         self._set_field(self.family_attributes, 0, 'FAMILY_NAME')
         self._set_field(self.family_attributes, 0, 'FAMILY_ID')
@@ -177,7 +176,7 @@ class FamParser(object):
         self._set_field(self.family_attributes, 1)
         self._set_field(self.family_attributes, 3, 'DATE_UPDATED', _date)
         self._set_field(self.family_attributes, 14)
-        self._set_field(self.family_attributes, 1, 'SELECTED_ID', ord)
+        self._set_field(self.family_attributes, 1, 'SELECTED_ID', _int)
         self._set_field(self.family_attributes, 17)
 
 
@@ -186,7 +185,8 @@ class FamParser(object):
         Extract person information.
         """
         # TODO: There seems to be support for more annotation (+/-).
-        member = collections.defaultdict(int)
+        # NOTE: all IDs are probably 2 bytes.
+        member = container.Container()
         self._set_field(member, 0, 'SURNAME')
         self._set_field(member, 1)
         self._set_field(member, 0, 'FORENAMES')
@@ -199,26 +199,26 @@ class FamParser(object):
         self._set_field(member, 3, 'DATE_OF_DEATH', _date)
         self._set_field(member, 1)
         self._set_field(member, 1, 'SEX', _sex)
-        self._set_field(member, 1, 'ID', ord)
+        self._set_field(member, 1, 'ID', _int)
         self._set_field(member, 3)
-        self._set_field(member, 1, 'MOTHER_ID', ord)
+        self._set_field(member, 1, 'MOTHER_ID', _int)
         self._set_field(member, 1)
-        self._set_field(member, 1, 'FATHER_ID', ord)
+        self._set_field(member, 1, 'FATHER_ID', _int)
         self._set_field(member, 1)
-        self._set_field(member, 1, 'INTERNAL_ID', ord)
+        self._set_field(member, 1, 'INTERNAL_ID', _int)
         self._set_field(member, 1)
-        self._set_field(member, 1, 'NUMBER_OF_INDIVIDUALS', ord)
+        self._set_field(member, 1, 'NUMBER_OF_INDIVIDUALS', _int)
         self._set_field(member, 1)
         self._set_field(member, 0, 'AGE_GESTATION')
         self._set_field(member, 0, 'INDIVIDUAL_ID')
-        self._set_field(member, 1, 'NUMBER_OF_SPOUSES', ord)
+        self._set_field(member, 1, 'NUMBER_OF_SPOUSES', _int)
         self._set_field(member, 1)
 
         for spouse in range(member['NUMBER_OF_SPOUSES']):
-            self._set_field(member, 1, 'SPOUSE_{}_ID'.format(spouse), ord)
+            self._set_field(member, 1, 'SPOUSE_{}_ID'.format(spouse), _int)
             self._set_field(member, 1)
             self._set_field(member, 1,
-                'SPOUSE_{}_RELATION_FLAGS'.format(spouse), ord)
+                'SPOUSE_{}_RELATION_FLAGS'.format(spouse), _int)
             self._set_field(member, 0,
                 'SPOUSE_{}_RELATION_NAME'.format(spouse))
 
@@ -234,9 +234,9 @@ class FamParser(object):
         self._set_field(member, 1, 'FLAGS_1', _bit)
         self._set_field(member, 2)
         self._set_field(member, 1, 'PROBAND', _proband)
-        self._set_field(member, 1, 'X_COORDINATE', ord)
+        self._set_field(member, 1, 'X_COORDINATE', _int)
         self._set_field(member, 1)
-        self._set_field(member, 1, 'Y_COORDINATE', ord)
+        self._set_field(member, 1, 'Y_COORDINATE', _int)
         self._set_field(member, 1)
         self._set_field(member, 1, 'FLAGS_2', _bit)
         self._set_field(member, 26)
@@ -255,12 +255,12 @@ class FamParser(object):
         Extract information from a text field.
         """
         # TODO: X and Y coordinates have more digits.
-        text = collections.defaultdict(int)
+        text = container.Container()
         self._set_field(text, 0, 'TEXT', _text)
         self._set_field(text, 54)
-        self._set_field(text, 1, 'X_COORDINATE', ord)
+        self._set_field(text, 1, 'X_COORDINATE', _int)
         self._set_field(text, 3)
-        self._set_field(text, 1, 'Y_COORDINATE', ord)
+        self._set_field(text, 1, 'Y_COORDINATE', _int)
         self._set_field(text, 7)
 
         self.text.append(text)
@@ -271,7 +271,7 @@ class FamParser(object):
         Extract information from the footer.
         """
         self._set_field(self.footer, 3)
-        self._set_field(self.footer, 1, 'NUMBER_OF_CUSTOM_DESC', ord)
+        self._set_field(self.footer, 1, 'NUMBER_OF_CUSTOM_DESC', _int)
         self._set_field(self.footer, 1)
 
         for description in range(23):
@@ -289,7 +289,7 @@ class FamParser(object):
         self._set_field(self.footer, 4, 'UNKNOWN_1', _raw) # Change with zoom.
         self._set_field(self.footer, 4, 'UNKNOWN_2', _raw) # Change with zoom.
         self._set_field(self.footer, 20)
-        self._set_field(self.footer, 1, 'NUMBER_OF_TEXT_FIELDS', ord)
+        self._set_field(self.footer, 1, 'NUMBER_OF_TEXT_FIELDS', _int)
         self._set_field(self.footer, 1)
 
 
@@ -300,7 +300,7 @@ class FamParser(object):
         :arg dict dictionary: Dictionary to write.
         :arg stream output_handle: Open writable handle.
         """
-        for key, value in sorted(dictionary.items()):
+        for key, value in dictionary.items():
             output_handle.write("{}: {}\n".format(key, value))
 
 
