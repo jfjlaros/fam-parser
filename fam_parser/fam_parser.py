@@ -9,6 +9,7 @@ FAM parser.
 # NOTE: all IDs are probably 2 bytes.
 
 import argparse
+import sys
 import time
 
 import container
@@ -121,6 +122,14 @@ def _date(data):
     return 'UNKNOWN'
 
 
+def _block_write(string, block_size, stream=sys.stdout):
+    """
+    """
+    for block in map(lambda x: string[x:x + block_size],
+            range(0, len(string), block_size)):
+        stream.write('% {}\n'.format(block))
+
+
 class FamParser(object):
     """
     FAM file parsing class.
@@ -132,6 +141,7 @@ class FamParser(object):
         self.members = []
         self.relationships = container.Container()
         self.text = []
+        self.crossovers = []
         self.debug = debug
         self.extracted = 0
 
@@ -210,6 +220,34 @@ class FamParser(object):
             self.relationships[key] = relationship
 
 
+    def _parse_crossover(self, person_id):
+        """
+        Extract crossover information.
+        """
+        crossover = container.Container()
+        events = 0
+
+        crossover['ID'] = person_id
+        self._set_field(crossover, 1, 'LAST_FLAG', _raw)
+        while crossover['LAST_FLAG'] != '22':
+            self._set_field(crossover, 11, 'CROSSOVER_{0:02d}'.format(events),
+                _raw)
+            self._set_field(crossover, 1, 'LAST_FLAG', _raw)
+            events += 1
+
+        crossover['LAST_FLAG'] = ''
+        while crossover['LAST_FLAG'] != '22':
+            self._set_field(crossover, 11, 'CROSSOVER_{0:02d}'.format(events),
+                _raw)
+            self._set_field(crossover, 1, 'LAST_FLAG', _raw)
+            events += 1
+
+        self._set_field(crossover, 9)
+
+        crossover.pop('LAST_FLAG')
+        self.crossovers.append(crossover)
+
+
     def _parse_member(self):
         """
         Extract person information.
@@ -256,7 +294,10 @@ class FamParser(object):
         self._set_field(member, 1, 'Y_COORDINATE', _int)
         self._set_field(member, 1)
         self._set_field(member, 1, 'FLAGS_2', _bit)
-        self._set_field(member, 26)
+        self._set_field(member, 4)
+
+        self._parse_crossover(member['ID'])
+
         self._set_field(member, 1, 'FLAGS_3', _bit)
         self._set_field(member, 205)
 
@@ -355,6 +396,10 @@ class FamParser(object):
         for relationship in self.relationships.values():
             output_handle.write('\n\n--- RELATIONSHIP ---\n\n')
             self._write_dictionary(relationship, output_handle)
+
+        #for crossover in self.crossovers:
+        #    output_handle.write('\n\n--- CROSSOVER ---\n\n')
+        #    self._write_dictionary(crossover, output_handle)
 
         for text in self.text:
             output_handle.write('\n\n--- TEXT ---\n\n')
