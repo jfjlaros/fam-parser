@@ -122,6 +122,7 @@ class FamParser(object):
         self.family_attributes = container.Container()
         self.metadata = container.Container()
         self.members = []
+        self.relationships = container.Container()
         self.footer = container.Container()
         self.text = []
         self.debug = debug
@@ -180,6 +181,31 @@ class FamParser(object):
         self._set_field(self.family_attributes, 17)
 
 
+    def _parse_relationship(self, person_id):
+        """
+        Extract relationship information.
+        """
+        # NOTE: all IDs are probably 2 bytes.
+        relationship = container.Container()
+
+        relationship['MEMBER_1_ID'] = person_id
+        self._set_field(relationship, 1, 'MEMBER_2_ID', _int)
+        self._set_field(relationship, 1)
+        self._set_field(relationship, 1, 'RELATION_FLAGS', _int)
+        self._set_field(relationship, 0, 'RELATION_NAME')
+
+        relation_flags = relationship['RELATION_FLAGS']
+        relationship['RELATION_STATUS'] = _relation(relation_flags)
+        relationship['RELATION_IS_INFORMAL'] = str(bool(relation_flags &
+            0b00000001))
+        relationship['RELATION_IS_CONSANGUINEOUS'] = str(bool(relation_flags &
+            0b00000010))
+
+        key = tuple(sorted((person_id, relationship['MEMBER_2_ID'])))
+        if not self.relationships[key]:
+            self.relationships[key] = relationship
+
+
     def _parse_member(self):
         """
         Extract person information.
@@ -187,6 +213,7 @@ class FamParser(object):
         # TODO: There seems to be support for more annotation (+/-).
         # NOTE: all IDs are probably 2 bytes.
         member = container.Container()
+
         self._set_field(member, 0, 'SURNAME')
         self._set_field(member, 1)
         self._set_field(member, 0, 'FORENAMES')
@@ -215,20 +242,7 @@ class FamParser(object):
         self._set_field(member, 1)
 
         for spouse in range(member['NUMBER_OF_SPOUSES']):
-            self._set_field(member, 1, 'SPOUSE_{}_ID'.format(spouse), _int)
-            self._set_field(member, 1)
-            self._set_field(member, 1,
-                'SPOUSE_{}_RELATION_FLAGS'.format(spouse), _int)
-            self._set_field(member, 0,
-                'SPOUSE_{}_RELATION_NAME'.format(spouse))
-
-            relation_flags = member['SPOUSE_{}_RELATION_FLAGS'.format(spouse)]
-            member['SPOUSE_{}_RELATION_STATUS'.format(spouse)] = \
-                _relation(relation_flags)
-            member['SPOUSE_{}_RELATION_IS_INFORMAL'.format(spouse)] = \
-                str(bool(relation_flags & 0b00000001))
-            member['SPOUSE_{}_RELATION_IS_CONSANGUINEOUS'.format(spouse)] = \
-                str(bool(relation_flags & 0b00000010))
+            self._parse_relationship(member['ID'])
 
         self._set_field(member, 4)
         self._set_field(member, 1, 'FLAGS_1', _bit)
@@ -256,6 +270,7 @@ class FamParser(object):
         """
         # TODO: X and Y coordinates have more digits.
         text = container.Container()
+
         self._set_field(text, 0, 'TEXT', _text)
         self._set_field(text, 54)
         self._set_field(text, 1, 'X_COORDINATE', _int)
@@ -333,6 +348,10 @@ class FamParser(object):
         for member in self.members:
             output_handle.write('\n\n--- MEMBER ---\n\n')
             self._write_dictionary(member, output_handle)
+
+        for relationship in self.relationships.values():
+            output_handle.write('\n\n--- RELATIONSHIP ---\n\n')
+            self._write_dictionary(relationship, output_handle)
 
         output_handle.write('\n\n--- FOOTER ---\n\n')
         self._write_dictionary(self.footer, output_handle)
