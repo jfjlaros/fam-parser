@@ -225,26 +225,26 @@ class FamParser(object):
         Extract crossover information.
         """
         crossover = container.Container()
+        alleles = 0
         events = 0
 
         crossover['ID'] = person_id
-        self._set_field(crossover, 1, 'LAST_FLAG', _raw)
-        while crossover['LAST_FLAG'] != '22':
-            self._set_field(crossover, 11, 'CROSSOVER_{0:02d}'.format(events),
-                _raw)
-            self._set_field(crossover, 1, 'LAST_FLAG', _raw)
+        while alleles < 2:
+            flag = 'FLAG_{0:02d}'.format(events)
+
+            self._set_field(crossover, 1, flag, _raw)
+            if crossover[flag] == '22':
+                self._set_field(crossover, 9,
+                    'ALLELE_{0:02d}'.format(alleles), _raw)
+                if not alleles:
+                    self._set_field(crossover, 2,
+                        'SPACER'.format(alleles), _raw)
+                alleles += 1
+            else:
+                self._set_field(crossover, 11,
+                    'CROSSOVER_{0:02d}'.format(events), _raw)
             events += 1
 
-        crossover['LAST_FLAG'] = ''
-        while crossover['LAST_FLAG'] != '22':
-            self._set_field(crossover, 11, 'CROSSOVER_{0:02d}'.format(events),
-                _raw)
-            self._set_field(crossover, 1, 'LAST_FLAG', _raw)
-            events += 1
-
-        self._set_field(crossover, 9)
-
-        crossover.pop('LAST_FLAG')
         self.crossovers.append(crossover)
 
 
