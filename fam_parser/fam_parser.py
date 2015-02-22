@@ -124,6 +124,12 @@ def _date(data):
 
 def _block_write(string, block_size, stream=sys.stdout):
     """
+    Write a string as a block of width {block_size}. This function is mainly
+    for debugging purposes.
+
+    :arg str string: String to be written as a block.
+    :arg int block_size: Width of the block.
+    :arg stream stream: Open writable handle.
     """
     for block in map(lambda x: string[x:x + block_size],
             range(0, len(string), block_size)):
@@ -132,9 +138,15 @@ def _block_write(string, block_size, stream=sys.stdout):
 
 class FamParser(object):
     """
-    FAM file parsing class.
+    FAM file parsing.
     """
     def __init__(self, experimental=False, debug=False):
+        """
+        Constructor.
+
+        :arg bool experimental: Enable experimental features.
+        :arg bool debug: Enable debugging output.
+        """
         self.data = ""
         self.offset = 0
         self.metadata = container.Container()
@@ -154,8 +166,8 @@ class FamParser(object):
         delimiter. After reading, {self.offset} is set to the next field.
 
         :arg dict destination: Destination dictionary.
-        :arg str name: Field name.
         :arg int size: Size of fixed size field.
+        :arg str name: Field name.
         :arg function function: Conversion function.
         :arg str delimiter: Delimeter for variable size field.
         """
@@ -200,6 +212,8 @@ class FamParser(object):
     def _parse_relationship(self, person_id):
         """
         Extract relationship information.
+
+        :arg int person_id: The partner in this relationship.
         """
         relationship = container.Container()
 
@@ -224,6 +238,8 @@ class FamParser(object):
     def _parse_crossover(self, person_id):
         """
         Extract crossover information.
+
+        :arg int person_id: The person who has these crossovers.
         """
         crossover = container.Container()
         alleles = 0
@@ -421,6 +437,8 @@ def fam_parser(input_handle, output_handle, experimental=False, debug=False):
 
     :arg stream input_handle: Open readable handle to a FAM file.
     :arg stream output_handle: Open writable handle.
+    :arg bool experimental: Enable experimental features.
+    :arg bool debug: Enable debugging output.
     """
     parser = FamParser(experimental, debug)
     parser.read(input_handle)
