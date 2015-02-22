@@ -134,7 +134,7 @@ class FamParser(object):
     """
     FAM file parsing class.
     """
-    def __init__(self, debug=False):
+    def __init__(self, experimental=False, debug=False):
         self.data = ""
         self.offset = 0
         self.metadata = container.Container()
@@ -143,6 +143,7 @@ class FamParser(object):
         self.text = []
         self.crossovers = []
         self.debug = debug
+        self.experimental = experimental
         self.extracted = 0
 
 
@@ -397,9 +398,10 @@ class FamParser(object):
             output_handle.write('\n\n--- RELATIONSHIP ---\n\n')
             self._write_dictionary(relationship, output_handle)
 
-        #for crossover in self.crossovers:
-        #    output_handle.write('\n\n--- CROSSOVER ---\n\n')
-        #    self._write_dictionary(crossover, output_handle)
+        if self.experimental:
+            for crossover in self.crossovers:
+                output_handle.write('\n\n--- CROSSOVER ---\n\n')
+                self._write_dictionary(crossover, output_handle)
 
         for text in self.text:
             output_handle.write('\n\n--- TEXT ---\n\n')
@@ -413,14 +415,14 @@ class FamParser(object):
                 self.extracted * 100 // len(self.data)))
 
 
-def fam_parser(input_handle, output_handle, debug=False):
+def fam_parser(input_handle, output_handle, experimental=False, debug=False):
     """
     Main entry point.
 
     :arg stream input_handle: Open readable handle to a FAM file.
     :arg stream output_handle: Open writable handle.
     """
-    parser = FamParser(debug)
+    parser = FamParser(experimental, debug)
     parser.read(input_handle)
     parser.write(output_handle)
 
@@ -437,11 +439,21 @@ def main():
         help='input file in FAM format')
     parser.add_argument('output_handle', type=argparse.FileType('w'),
         help='output file')
+    parser.add_argument('-e', dest='experimental', action='store_true',
+        help='enable experimental features')
     parser.add_argument('-d', dest='debug', action='store_true',
         help='enable debugging')
 
-    args = parser.parse_args()
-    fam_parser(args.input_handle, args.output_handle, args.debug)
+    try:
+        arguments = parser.parse_args()
+    except IOError as error:
+        parser.error(error)
+
+    try:
+        fam_parser(**dict((k, v) for k, v in vars(arguments).items()
+            if k not in ('func', 'subcommand')))
+    except ValueError as error:
+        parser.error(error)
 
 
 if __name__ == '__main__':
