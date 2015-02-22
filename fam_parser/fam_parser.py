@@ -37,6 +37,11 @@ ANNOTATION_2 = {
     '00000010': 'UNBORN',
     '00000011': 'ABORTED',
 }
+ANNOTATION_3 = {
+    '00000000': 'NONE',
+    '00010100': '+',
+    '00010101': '-'
+}
 RELATIONSHIP = {
     0b00000100: 'SEPARATED',
     0b00001000: 'DIVORCED',
@@ -269,7 +274,6 @@ class FamParser(object):
         """
         Extract person information.
         """
-        # TODO: There seems to be support for more annotation (+/-).
         member = container.Container()
 
         self._set_field(member, 0, 'SURNAME')
@@ -285,7 +289,9 @@ class FamParser(object):
         self._set_field(member, 1)
         self._set_field(member, 1, 'SEX', _sex)
         self._set_field(member, 1, 'ID', _int)
-        self._set_field(member, 3)
+        self._set_field(member, 1)
+        self._set_field(member, 1, 'UNKNOWN_1', _int)
+        self._set_field(member, 1)
         self._set_field(member, 1, 'MOTHER_ID', _int)
         self._set_field(member, 1)
         self._set_field(member, 1, 'FATHER_ID', _int)
@@ -316,11 +322,14 @@ class FamParser(object):
         self._parse_crossover(member['ID'])
 
         self._set_field(member, 1, 'FLAGS_3', _bit)
-        self._set_field(member, 205)
+        self._set_field(member, 180)
+        self._set_field(member, 1, 'FLAGS_4', _bit)
+        self._set_field(member, 24)
 
         member['ANNOTATION_1'] = ANNOTATION_1[(member['FLAGS_1'],
             member['FLAGS_3'])]
         member['ANNOTATION_2'] = ANNOTATION_2[(member['FLAGS_2'])]
+        member['ANNOTATION_3'] = ANNOTATION_3[(member['FLAGS_4'])]
 
         self.members.append(member)
 
