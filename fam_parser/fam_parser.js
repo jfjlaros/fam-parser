@@ -1,23 +1,56 @@
 var fs = require('fs');
 
+var PROBAND = ['NOT_A_PROBAND', 'ABOVE_LEFT', 'ABOVE_RIGHT', 'BELOW_LEFT',
+      'BELOW_RIGHT', 'LEFT', 'RIGHT'],
+    SEX = ['MALE', 'FEMALE', 'UNKNOWN'],
+    ANNOTATION_1 = {
+      '0000000000000000': 'NONE',
+      '0000001000000001': 'FILL',
+      '0000001000000000': 'FILL2', // BAR in combination with P or SB?
+      '0000001100000000': 'DOT',
+      '0000010000000000': 'QUESTION',
+      '0000010100000000': 'RIGHT-UPPER',
+      '0000011000000000': 'RIGHT-LOWER',
+      '0000100000000000': 'LEFT-UPPER',
+      '0000011100000000': 'LEFT-LOWER',
+    },
+    ANNOTATION_2 = {
+      '00000000': 'NONE',
+      '00000001': 'P',
+      '00000100': 'SB',
+      '00001011': 'BAR',
+      '00000010': 'UNBORN',
+      '00000011': 'ABORTED',
+    },
+    ANNOTATION_3 = {
+      '00000000': 'NONE',
+      '00010100': '+',
+      '00010101': '-'
+    },
+    RELATIONSHIP = {
+      0x04: 'SEPARATED',
+      0x10: 'DIVORCED',
+    };
+
 /**
  * Miscellaneous functions.
  */
+function pad(string, length) {
+  var padding = '',
+      index;
+
+  for (index = 0; index < length - string.length; index++) {
+    padding += '0';
+  }
+  return padding + string;
+}
+
 function convertToHex(data) {
   var result = '',
-      padding,
-      character,
       index;
 
   for (index = 0; index < data.length; index++) {
-    character = data.charCodeAt(index).toString(16);
-
-    padding = '';
-    if (character.length < 2) {
-      padding = '0';
-    }
-
-    result += padding + character;
+    result += pad(data.charCodeAt(index).toString(16), 2);
   }
   return result;
 }
@@ -33,8 +66,35 @@ function trim(data) {
   return data.split(String.fromCharCode(0x00))[0];
 }
 
+function proband(data) {
+  return PROBAND[data.charCodeAt(0)];
+}
+
+function sex(data) {
+  return SEX[data.charCodeAt(0)];
+}
+
+function relation(data) {
+  var annotation;
+
+  for (annotation in RELATIONSHIP) {
+    if (data === annotation) {
+      return RELATIONSHIP[data];
+    }
+  }
+  return 'NORMAL';
+}
+
 function raw(data) {
   return convertToHex(data);
+}
+
+function bit(data) {
+  return pad(data.charCodeAt(0).toString(2), 8);
+}
+
+function comment(data) {
+  return data.split(String.fromCharCode(0x09) + String.fromCharCode(0x03));
 }
 
 function integer(data) {
@@ -64,17 +124,17 @@ function FamParser(fileContent) {
       offset = 0,
       delimiter = 0x0d,
       metadata = {},
-      parsed = {
-        'metadata': {},
-        'relationships': {},
-      };
+      members = [],
+      relationships = [], // {}
+      crossovers = [];
 
   /**
    * Extract a field from {data} using either a fixed size, or a delimiter.
    * After reading, {offset} is set to the next field.
    */
   function setField(destination, size, name, func) {
-    var extracted;
+    var field,
+        extracted;
 
     if (size) {
       field = data.slice(offset, offset + size);
@@ -112,12 +172,149 @@ function FamParser(fileContent) {
     setField(metadata, 17);
   }
 
+  function parseRelationship(personId) {
+    var relationship = {},
+        relationFlags;
+
+    relationship.MEMBER_1_ID = personId;
+    setField(relationship, 1, 'MEMBER_2_ID', integer);
+    setField(relationship, 1);
+    setField(relationship, 1, 'RELATION_FLAGS', integer);
+    setField(relationship, 0, 'RELATION_NAME');
+
+    relationFlags = relationship.RELATION_FLAGS;
+    relationship.RELATION_STATUS = relation(relationFlags);
+    relationship.RELATION_IS_INFORMAL = Boolean(relationFlags & 0x01);
+    relationship.RELATION_IS_CONSANGUINEOUS = Boolean(relationFlags & 0x02);
+
+    /*
+    key = tuple(sorted((person_id, relationship['MEMBER_2_ID'])))
+    if not self.relationships[key]:
+        self.relationships[key] = relationship
+    */
+    relationships.push(relationship);
+  }
+
+  function parseCrossover(personId) {
+    var crossover = {},
+        alleles = 0,
+        events = 0,
+        flag;
+
+    crossover.ID = personId;
+    while (alleles < 2) {
+      flag = 'FLAG_' + pad(events.toString(), 2);
+
+      setField(crossover, 1, flag, raw);
+      if (crossover[flag] === '22') {
+        setField(crossover, 9, 'ALLELE_' + pad(alleles.toString(), 2), raw);
+        if (!alleles) {
+          setField(crossover, 2, 'SPACER_' + pad(alleles.toString(), 2), raw);
+        }
+        alleles += 1;
+      }
+      else {
+        setField(crossover, 11, 'CROSSOVER_' + pad(events.toString(), 2), raw);
+      }
+      events += 1;
+    }
+
+    crossovers.push(crossover);
+  }
+
+  function parseMember() {
+    var member = {},
+        spouse;
+
+    setField(member, 0, 'SURNAME');
+    setField(member, 1);
+    setField(member, 0, 'FORENAMES');
+    setField(member, 1);
+    setField(member, 0, 'MAIDEN_NAME');
+    setField(member, 11);
+    setField(member, 0, 'COMMENT', comment);
+    setField(member, 3, 'DATE_OF_BIRTH', date);
+    setField(member, 1);
+    setField(member, 3, 'DATE_OF_DEATH', date);
+    setField(member, 1);
+    setField(member, 1, 'SEX', sex);
+    setField(member, 1, 'ID', integer);
+    setField(member, 1);
+    setField(member, 1, 'UNKNOWN_1', integer);
+    setField(member, 1);
+    setField(member, 1, 'MOTHER_ID', integer);
+    setField(member, 1);
+    setField(member, 1, 'FATHER_ID', integer);
+    setField(member, 1);
+    setField(member, 1, 'INTERNAL_ID', integer);
+    setField(member, 1);
+    setField(member, 1, 'NUMBER_OF_INDIVIDUALS', integer);
+    setField(member, 1);
+    setField(member, 0, 'AGE_GESTATION');
+    setField(member, 0, 'INDIVIDUAL_ID');
+    setField(member, 1, 'NUMBER_OF_SPOUSES', integer);
+    setField(member, 1);
+
+    for (spouse = 0; spouse <  member.NUMBER_OF_SPOUSES; spouse++) {
+      parseRelationship(member.ID);
+    }
+
+    setField(member, 4);
+    setField(member, 1, 'FLAGS_1', bit);
+    setField(member, 2);
+    setField(member, 1, 'PROBAND', proband);
+    setField(member, 1, 'X_COORDINATE', integer);
+    setField(member, 1);
+    setField(member, 1, 'Y_COORDINATE', integer);
+    setField(member, 1);
+    setField(member, 1, 'FLAGS_2', bit);
+    setField(member, 4);
+
+    parseCrossover(member.ID);
+
+    setField(member, 1, 'FLAGS_3', bit);
+    setField(member, 180);
+    setField(member, 1, 'FLAGS_4', bit);
+    setField(member, 24);
+
+    member.ANNOTATION_1 = ANNOTATION_1[member.FLAGS_1 + member.FLAGS_3];
+    member.ANNOTATION_2 = ANNOTATION_2[member.FLAGS_2];
+    member.ANNOTATION_3 = ANNOTATION_3[member.FLAGS_4];
+
+    members.push(member);
+  }
+
   this.parse = function() {
+    var member;
+
     parseHeader();
+    for (member = 0; member < metadata.SIZE; member++) {
+      parseMember();
+    }
   };
 
   this.dump = function() {
-    return metadata;
+    var index;
+
+    console.log('--- METADATA ---\n');
+    console.log(metadata);
+
+    for (index = 0; index < members.length; index++) {
+      console.log('\n\n--- MEMBER ---\n');
+      console.log(members[index]);
+    }
+
+    for (index = 0; index < relationships.length; index++) {
+      console.log('\n\n--- RELATIONSHIP ---\n');
+      console.log(relationships[index]);
+    }
+
+    /*
+    for (index = 0; index < crossovers.length; index++) {
+      console.log('\n\n--- CROSSOVER ---\n');
+      console.log(crossovers[index]);
+    }
+    */
   };
 }
 
@@ -125,4 +322,4 @@ function FamParser(fileContent) {
 var T1 = new FamParser(fs.readFileSync(
   '../data/example.fam').toString('binary'));
 T1.parse();
-console.log(T1.dump());
+T1.dump();
