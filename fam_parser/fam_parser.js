@@ -283,6 +283,49 @@ function FamParser(fileContent) {
     members.push(member);
   }
 
+/*
+    def _parse_text(self):
+        """
+        Extract information from a text field.
+        """
+        # TODO: X and Y coordinates have more digits.
+        text = container.Container()
+
+        self._set_field(text, 0, 'TEXT', _text)
+        self._set_field(text, 54)
+        self._set_field(text, 1, 'X_COORDINATE', _int)
+        self._set_field(text, 3)
+        self._set_field(text, 1, 'Y_COORDINATE', _int)
+        self._set_field(text, 7)
+
+        self.text.append(text)
+
+*/
+  function parseFooter() {
+    var index;
+
+    setField(metadata, 3);
+    setField(metadata, 1, 'NUMBER_OF_CUSTOM_DESC', integer);
+    setField(metadata, 1);
+
+    for (index = 0; index < 23; index++) {
+      setField(metadata, 0, 'DESC_' + pad(index, 2), identity);
+    }
+
+    for (index = 0; index < metadata.NUMBER_OF_CUSTOM_DESC; index++) {
+     setField(metadata, 0, 'CUSTOM_DESC_' + pad(index, 2), identity);
+     setField(metadata, 0, 'CUSTOM_CHAR_' + pad(index, 2), identity);
+    }
+
+    setField(metadata, 14);
+    setField(metadata, 2, 'ZOOM', integer);
+    setField(metadata, 4, 'UNKNOWN_1', raw); // Zoom.
+    setField(metadata, 4, 'UNKNOWN_2', raw); // Zoom.
+    setField(metadata, 20);
+    setField(metadata, 1, 'NUMBER_OF_TEXT_FIELDS', integer);
+    setField(metadata, 1);
+  }
+
   this.parse = function() {
     var member;
 
@@ -290,6 +333,8 @@ function FamParser(fileContent) {
     for (member = 0; member < metadata.SIZE; member++) {
       parseMember();
     }
+
+    parseFooter();
   };
 
   this.dump = function() {
