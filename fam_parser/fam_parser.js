@@ -97,6 +97,10 @@ function comment(data) {
   return data.split(String.fromCharCode(0x09) + String.fromCharCode(0x03));
 }
 
+function freetext(data) {
+  return data.split(String.fromCharCode(0x0b) + String.fromCharCode(0x0b));
+}
+
 function integer(data) {
   var result = 0,
       index;
@@ -126,6 +130,7 @@ function FamParser(fileContent) {
       metadata = {},
       members = [],
       relationships = {},
+      texts = [],
       crossovers = [];
 
   /**
@@ -283,24 +288,20 @@ function FamParser(fileContent) {
     members.push(member);
   }
 
-/*
-    def _parse_text(self):
-        """
-        Extract information from a text field.
-        """
-        # TODO: X and Y coordinates have more digits.
-        text = container.Container()
+  function parseText(self) {
+    // TODO: X and Y coordinates have more digits.
+    var text = {};
 
-        self._set_field(text, 0, 'TEXT', _text)
-        self._set_field(text, 54)
-        self._set_field(text, 1, 'X_COORDINATE', _int)
-        self._set_field(text, 3)
-        self._set_field(text, 1, 'Y_COORDINATE', _int)
-        self._set_field(text, 7)
+    setField(text, 0, 'TEXT', freetext);
+    setField(text, 54);
+    setField(text, 1, 'X_COORDINATE', integer);
+    setField(text, 3);
+    setField(text, 1, 'Y_COORDINATE', integer);
+    setField(text, 7);
 
-        self.text.append(text)
+    texts.push(text)
+   }
 
-*/
   function parseFooter() {
     var index;
 
@@ -327,7 +328,8 @@ function FamParser(fileContent) {
   }
 
   this.parse = function() {
-    var member;
+    var member,
+        index;
 
     parseHeader();
     for (member = 0; member < metadata.SIZE; member++) {
@@ -335,6 +337,9 @@ function FamParser(fileContent) {
     }
 
     parseFooter();
+    for (index = 0; index < metadata.NUMBER_OF_TEXT_FIELDS; index++) {
+      parseText();
+    }
   };
 
   this.dump = function() {
@@ -360,6 +365,11 @@ function FamParser(fileContent) {
       console.log(crossovers[index]);
     }
     */
+
+    for (index = 0; index < texts.length; index++) {
+      console.log('\n\n--- TEXT ---\n');
+      console.log(texts[index]);
+    }
   };
 }
 
