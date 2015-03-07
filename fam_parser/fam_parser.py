@@ -6,7 +6,7 @@ FAM parser.
 
 (C) 2015 Jeroen F.J. Laros <J.F.J.Laros@lumc.nl>
 """
-# NOTE: all IDs are probably 2 bytes.
+# NOTE: All IDs are probably 2 bytes.
 
 import argparse
 import sys
@@ -260,7 +260,7 @@ class FamParser(object):
                     'ALLELE_{0:02d}'.format(alleles), _raw)
                 if not alleles:
                     self._set_field(crossover, 2,
-                        'SPACER'.format(alleles), _raw)
+                        'SPACER_{0:02d}'.format(alleles), _raw)
                 alleles += 1
             else:
                 self._set_field(crossover, 11,
