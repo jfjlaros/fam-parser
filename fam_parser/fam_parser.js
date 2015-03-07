@@ -36,7 +36,7 @@ var PROBAND = ['NOT_A_PROBAND', 'ABOVE_LEFT', 'ABOVE_RIGHT', 'BELOW_LEFT',
     },
     RELATIONSHIP = {
       0x04: 'SEPARATED',
-      0x10: 'DIVORCED'
+      0x08: 'DIVORCED'
     };
 
 /*
@@ -103,7 +103,7 @@ function relation(data) {
   var annotation;
 
   for (annotation in RELATIONSHIP) {
-    if (data === annotation) {
+    if (data === parseInt(annotation)) {
       return RELATIONSHIP[data];
     }
   }
