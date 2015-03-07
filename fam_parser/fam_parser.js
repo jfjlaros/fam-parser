@@ -1,4 +1,11 @@
-var fs = require('fs');
+'use strict';
+
+/*
+FAM parser.
+
+(C) 2015 Jeroen F.J. Laros <J.F.J.Laros@lumc.nl>
+*/
+// NOTE: All IDs are probably 2 bytes.
 
 var PROBAND = ['NOT_A_PROBAND', 'ABOVE_LEFT', 'ABOVE_RIGHT', 'BELOW_LEFT',
       'BELOW_RIGHT', 'LEFT', 'RIGHT'],
@@ -32,9 +39,18 @@ var PROBAND = ['NOT_A_PROBAND', 'ABOVE_LEFT', 'ABOVE_RIGHT', 'BELOW_LEFT',
       0x10: 'DIVORCED',
     };
 
-/**
- * Miscellaneous functions.
- */
+/*
+Miscellaneous functions.
+*/
+
+/*
+Pad a string with leading zeroes.
+
+:arg str string: String to be padded.
+:arg int length: Length of the resulting string.
+
+:return str: Padded string.
+*/
 function pad(string, length) {
   var padding = '',
       index;
@@ -45,6 +61,13 @@ function pad(string, length) {
   return padding + string;
 }
 
+/*
+Encode a string in hexadecimal.
+
+:arg str data: Input string.
+
+:return str: Hexadecimal representation of {data}.
+*/
 function convertToHex(data) {
   var result = '',
       index;
@@ -55,9 +78,10 @@ function convertToHex(data) {
   return result;
 }
 
-/**
- * Helper functions.
- */
+/*
+Helper functions.
+*/
+
 function identity(data) {
   return data;
 }
@@ -101,6 +125,18 @@ function freetext(data) {
   return data.split(String.fromCharCode(0x0b) + String.fromCharCode(0x0b));
 }
 
+/*
+Decode a little-endian encoded integer.
+
+Decoding is done as follows:
+- Reverse the order of the bits.
+- Convert the bits to ordinals.
+- Interpret the list of ordinals as digits in base 256.
+
+:arg str data: Little-endian encoded integer.
+
+:return int: Integer representation of {data}
+*/
 function integer(data) {
   var result = 0,
       index;
@@ -111,6 +147,16 @@ function integer(data) {
   return result;
 }
 
+/*
+Decode a date.
+
+The date is encoded as an integer, representing the year followed by the (zero
+padded) day of the year.
+
+:arg str data: Binary encoded date.
+
+:return str: Date in format '%Y%j', 'DEFINED' or 'UNKNOWN'.
+*/
 function date(data) {
   var dateInt = integer(data);
 
@@ -123,6 +169,9 @@ function date(data) {
   return 'UNKNOWN';
 }
 
+/*
+FAM file parsing.
+*/
 function FamParser(fileContent) {
   var data = fileContent,
       offset = 0,
@@ -133,10 +182,15 @@ function FamParser(fileContent) {
       texts = [],
       crossovers = [];
 
-  /**
-   * Extract a field from {data} using either a fixed size, or a delimiter.
-   * After reading, {offset} is set to the next field.
-   */
+  /*
+  Extract a field from {data} using either a fixed size, or a delimiter. After
+  reading, {offset} is set to the next field.
+
+  :arg object destination: Destination object.
+  :arg int size: Size of fixed size field.
+  :arg str name: Field name.
+  :arg function func: Conversion function.
+  */
   function setField(destination, size, name, func) {
     var field,
         extracted;
@@ -161,6 +215,9 @@ function FamParser(fileContent) {
     offset += extracted;
   }
 
+  /*
+  Extract header information.
+  */
   function parseHeader() {
     setField(metadata, 26, 'SOURCE', trim);
     setField(metadata, 0, 'FAMILY_NAME');
@@ -177,6 +234,11 @@ function FamParser(fileContent) {
     setField(metadata, 17);
   }
 
+  /*
+  Extract relationship information.
+
+  :arg int personId: The partner in this relationship.
+  */
   function parseRelationship(personId) {
     var relationship = {},
         relationFlags,
@@ -199,6 +261,11 @@ function FamParser(fileContent) {
     }
   }
 
+  /*
+  Extract crossover information.
+
+  :arg int personId: The person who has these crossovers.
+  */
   function parseCrossover(personId) {
     var crossover = {},
         alleles = 0,
@@ -226,6 +293,9 @@ function FamParser(fileContent) {
     crossovers.push(crossover);
   }
 
+  /*
+  Extract person information.
+  */
   function parseMember() {
     var member = {},
         spouse;
@@ -288,7 +358,10 @@ function FamParser(fileContent) {
     members.push(member);
   }
 
-  function parseText(self) {
+  /*
+  Extract information from a text field.
+  */
+  function parseText() {
     // TODO: X and Y coordinates have more digits.
     var text = {};
 
@@ -302,6 +375,9 @@ function FamParser(fileContent) {
     texts.push(text)
    }
 
+  /*
+  Extract information from the footer.
+  */
   function parseFooter() {
     var index;
 
@@ -327,6 +403,9 @@ function FamParser(fileContent) {
     setField(metadata, 1);
   }
 
+  /*
+  Parse a FAM file.
+  */
   this.parse = function() {
     var member,
         index;
@@ -342,6 +421,9 @@ function FamParser(fileContent) {
     }
   };
 
+  /*
+  Write the parsed FAM file to the console.
+  */
   this.dump = function() {
     var index,
         key;
@@ -373,8 +455,9 @@ function FamParser(fileContent) {
   };
 }
 
-
-var T1 = new FamParser(fs.readFileSync(
+// NOTE: Remove this after integration.
+var fs = require('fs'),
+    FP = new FamParser(fs.readFileSync(
   '../data/example.fam').toString('binary'));
-T1.parse();
-T1.dump();
+FP.parse();
+FP.dump();
