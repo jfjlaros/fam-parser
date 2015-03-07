@@ -19,7 +19,7 @@ var PROBAND = ['NOT_A_PROBAND', 'ABOVE_LEFT', 'ABOVE_RIGHT', 'BELOW_LEFT',
       '0000010100000000': 'RIGHT-UPPER',
       '0000011000000000': 'RIGHT-LOWER',
       '0000100000000000': 'LEFT-UPPER',
-      '0000011100000000': 'LEFT-LOWER',
+      '0000011100000000': 'LEFT-LOWER'
     },
     ANNOTATION_2 = {
       '00000000': 'NONE',
@@ -27,7 +27,7 @@ var PROBAND = ['NOT_A_PROBAND', 'ABOVE_LEFT', 'ABOVE_RIGHT', 'BELOW_LEFT',
       '00000100': 'SB',
       '00001011': 'BAR',
       '00000010': 'UNBORN',
-      '00000011': 'ABORTED',
+      '00000011': 'ABORTED'
     },
     ANNOTATION_3 = {
       '00000000': 'NONE',
@@ -36,7 +36,7 @@ var PROBAND = ['NOT_A_PROBAND', 'ABOVE_LEFT', 'ABOVE_RIGHT', 'BELOW_LEFT',
     },
     RELATIONSHIP = {
       0x04: 'SEPARATED',
-      0x10: 'DIVORCED',
+      0x10: 'DIVORCED'
     };
 
 /*
@@ -282,12 +282,12 @@ function FamParser(fileContent) {
         if (!alleles) {
           setField(crossover, 2, 'SPACER_' + pad(alleles.toString(), 2), raw);
         }
-        alleles += 1;
+        alleles++;
       }
       else {
         setField(crossover, 11, 'CROSSOVER_' + pad(events.toString(), 2), raw);
       }
-      events += 1;
+      events++;
     }
 
     crossovers.push(crossover);
@@ -298,7 +298,7 @@ function FamParser(fileContent) {
   */
   function parseMember() {
     var member = {},
-        spouse;
+        index;
 
     setField(member, 0, 'SURNAME');
     setField(member, 1);
@@ -329,7 +329,7 @@ function FamParser(fileContent) {
     setField(member, 1, 'NUMBER_OF_SPOUSES', integer);
     setField(member, 1);
 
-    for (spouse = 0; spouse <  member.NUMBER_OF_SPOUSES; spouse++) {
+    for (index = 0; index <  member.NUMBER_OF_SPOUSES; index++) {
       parseRelationship(member.ID);
     }
 
@@ -407,11 +407,10 @@ function FamParser(fileContent) {
   Parse a FAM file.
   */
   this.parse = function() {
-    var member,
-        index;
+    var index;
 
     parseHeader();
-    for (member = 0; member < metadata.SIZE; member++) {
+    for (index = 0; index < metadata.SIZE; index++) {
       parseMember();
     }
 
