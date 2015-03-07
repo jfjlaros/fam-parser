@@ -125,7 +125,7 @@ function FamParser(fileContent) {
       delimiter = 0x0d,
       metadata = {},
       members = [],
-      relationships = [], // {}
+      relationships = {},
       crossovers = [];
 
   /**
@@ -174,7 +174,8 @@ function FamParser(fileContent) {
 
   function parseRelationship(personId) {
     var relationship = {},
-        relationFlags;
+        relationFlags,
+        key;
 
     relationship.MEMBER_1_ID = personId;
     setField(relationship, 1, 'MEMBER_2_ID', integer);
@@ -187,12 +188,10 @@ function FamParser(fileContent) {
     relationship.RELATION_IS_INFORMAL = Boolean(relationFlags & 0x01);
     relationship.RELATION_IS_CONSANGUINEOUS = Boolean(relationFlags & 0x02);
 
-    /*
-    key = tuple(sorted((person_id, relationship['MEMBER_2_ID'])))
-    if not self.relationships[key]:
-        self.relationships[key] = relationship
-    */
-    relationships.push(relationship);
+    key = [personId, relationship.MEMBER_2_ID].sort().toString();
+    if (relationships[key] === undefined) {
+      relationships[key] = relationship;
+    }
   }
 
   function parseCrossover(personId) {
@@ -294,7 +293,8 @@ function FamParser(fileContent) {
   };
 
   this.dump = function() {
-    var index;
+    var index,
+        key;
 
     console.log('--- METADATA ---\n');
     console.log(metadata);
@@ -304,9 +304,9 @@ function FamParser(fileContent) {
       console.log(members[index]);
     }
 
-    for (index = 0; index < relationships.length; index++) {
+    for (key in relationships) {
       console.log('\n\n--- RELATIONSHIP ---\n');
-      console.log(relationships[index]);
+      console.log(relationships[key]);
     }
 
     /*
