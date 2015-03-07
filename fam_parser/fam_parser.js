@@ -63,6 +63,7 @@ function FamParser(fileContent) {
   var data = fileContent,
       offset = 0,
       delimiter = 0x0d,
+      metadata = {},
       parsed = {
         'metadata': {},
         'relationships': {},
@@ -86,29 +87,29 @@ function FamParser(fileContent) {
 
     if (name !== undefined) {
       if (func === undefined) {
-        parsed[destination][name] = identity(field);
+        destination[name] = identity(field);
       }
       else {
-        parsed[destination][name] = func(field);
+        destination[name] = func(field);
       }
     }
     offset += extracted;
   }
 
   function parseHeader() {
-    setField('metadata', 26, 'SOURCE', trim);
-    setField('metadata', 0, 'FAMILY_NAME');
-    setField('metadata', 0, 'FAMILY_ID');
-    setField('metadata', 0, 'AUTHOR');
-    setField('metadata', 1, 'SIZE', integer);
-    setField('metadata', 45);
-    setField('metadata', 0, 'COMMENT');
-    setField('metadata', 3, 'DATE_CREATED', date);
-    setField('metadata', 1);
-    setField('metadata', 3, 'DATE_UPDATED', date);
-    setField('metadata', 14);
-    setField('metadata', 1, 'SELECTED_ID', integer);
-    setField('metadata', 17);
+    setField(metadata, 26, 'SOURCE', trim);
+    setField(metadata, 0, 'FAMILY_NAME');
+    setField(metadata, 0, 'FAMILY_ID');
+    setField(metadata, 0, 'AUTHOR');
+    setField(metadata, 1, 'SIZE', integer);
+    setField(metadata, 45);
+    setField(metadata, 0, 'COMMENT');
+    setField(metadata, 3, 'DATE_CREATED', date);
+    setField(metadata, 1);
+    setField(metadata, 3, 'DATE_UPDATED', date);
+    setField(metadata, 14);
+    setField(metadata, 1, 'SELECTED_ID', integer);
+    setField(metadata, 17);
   }
 
   this.parse = function() {
@@ -116,7 +117,7 @@ function FamParser(fileContent) {
   };
 
   this.dump = function() {
-    return parsed;
+    return metadata;
   };
 }
 
