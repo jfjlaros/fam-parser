@@ -46,13 +46,14 @@ Miscellaneous functions.
 /*
 Pad a string with leading zeroes.
 
-:arg str string: String to be padded.
+:arg any input: String to be padded.
 :arg int length: Length of the resulting string.
 
 :return str: Padded string.
 */
-function pad(string, length) {
-  var padding = '',
+function pad(input, length) {
+  var string = input.toString(),
+      padding = '',
       index;
 
   for (index = 0; index < length - string.length; index++) {
@@ -274,18 +275,18 @@ function FamParser(fileContent) {
 
     crossover.ID = personId;
     while (alleles < 2) {
-      flag = 'FLAG_' + pad(events.toString(), 2);
+      flag = 'FLAG_' + pad(events, 2);
 
       setField(crossover, 1, flag, raw);
       if (crossover[flag] === '22') {
-        setField(crossover, 9, 'ALLELE_' + pad(alleles.toString(), 2), raw);
+        setField(crossover, 9, 'ALLELE_' + pad(alleles, 2), raw);
         if (!alleles) {
-          setField(crossover, 2, 'SPACER_' + pad(alleles.toString(), 2), raw);
+          setField(crossover, 2, 'SPACER_' + pad(alleles, 2), raw);
         }
         alleles++;
       }
       else {
-        setField(crossover, 11, 'CROSSOVER_' + pad(events.toString(), 2), raw);
+        setField(crossover, 11, 'CROSSOVER_' + pad(events, 2), raw);
       }
       events++;
     }
