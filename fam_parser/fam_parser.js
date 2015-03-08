@@ -11,28 +11,16 @@ var PROBAND = ['NOT_A_PROBAND', 'ABOVE_LEFT', 'ABOVE_RIGHT', 'BELOW_LEFT',
       'BELOW_RIGHT', 'LEFT', 'RIGHT'],
     SEX = ['MALE', 'FEMALE', 'UNKNOWN'],
     ANNOTATION_1 = {
-      '0000000000000000': 'NONE',        // DESC_00?
-      '0000001000000001': 'FILL',        // DESC_02?
-      '0000001000000000': 'FILL2',       // BAR in combination with P or SB?
-      '0000001100000000': 'DOT',         // DESC_03?
-      '0000010000000000': 'QUESTION',    // DESC_04?
-      '0000010100000000': 'RIGHT-UPPER', // DESC_05?
-      '0000011000000000': 'RIGHT-LOWER', // DESC_06?
-      '0000100000000000': 'LEFT-UPPER',  // DESC_08?
-      '0000011100000000': 'LEFT-LOWER'   // DESC_07?
+      0x00: 'NONE',
+      0x01: 'P',
+      0x02: 'UNBORN',
+      0x03: 'ABORTED',
+      0x04: 'SB',
+      0x0b: 'BAR'
     },
     ANNOTATION_2 = {
-      '00000000': 'NONE',
-      '00000001': 'P',
-      '00000100': 'SB',
-      '00001011': 'BAR',
-      '00000010': 'UNBORN',
-      '00000011': 'ABORTED'
-    },
-    ANNOTATION_3 = {
-      '00000000': 'NONE',
-      '00010100': '+',    // DESC_20?
-      '00010101': '-'     // DESC_21?
+      0x00: 'NONE',
+      0x01: 'FILL'
     },
     RELATIONSHIP = {
       0x04: 'SEPARATED',
@@ -181,7 +169,8 @@ function FamParser(fileContent) {
       members = [],
       relationships = {},
       texts = [],
-      crossovers = [];
+      crossovers = [],
+      desc_prefix = "DESC_";
 
   /*
   Extract a field from {data} using either a fixed size, or a delimiter. After
@@ -335,26 +324,28 @@ function FamParser(fileContent) {
     }
 
     setField(member, 4);
-    setField(member, 1, 'FLAGS_1', bit);
+    setField(member, 1, 'FLAGS_1', integer);
     setField(member, 2);
     setField(member, 1, 'PROBAND', proband);
     setField(member, 1, 'X_COORDINATE', integer);
     setField(member, 1);
     setField(member, 1, 'Y_COORDINATE', integer);
     setField(member, 1);
-    setField(member, 1, 'FLAGS_2', bit);
+    setField(member, 1, 'FLAGS_2', integer);
     setField(member, 4);
 
     parseCrossover(member.ID);
 
-    setField(member, 1, 'FLAGS_3', bit);
+    setField(member, 1, 'FLAGS_3', integer);
     setField(member, 180);
-    setField(member, 1, 'FLAGS_4', bit);
+    setField(member, 1, 'FLAGS_4', integer);
     setField(member, 24);
 
-    member.ANNOTATION_1 = ANNOTATION_1[member.FLAGS_1 + member.FLAGS_3];
-    member.ANNOTATION_2 = ANNOTATION_2[member.FLAGS_2];
-    member.ANNOTATION_3 = ANNOTATION_3[member.FLAGS_4];
+    member.ANNOTATION_1 = ANNOTATION_1[member.FLAGS_2];
+    member.ANNOTATION_2 = ANNOTATION_2[member.FLAGS_3];
+    member.DESCRIPTION_1 = desc_prefix + pad(member.FLAGS_1, 2);
+    member.DESCRIPTION_2 = desc_prefix + pad(member.FLAGS_4, 2);
+
 
     members.push(member);
   }
@@ -387,7 +378,7 @@ function FamParser(fileContent) {
     setField(metadata, 1);
 
     for (index = 0; index < 23; index++) {
-      setField(metadata, 0, 'DESC_' + pad(index, 2), identity);
+      setField(metadata, 0, desc_prefix + pad(index, 2), identity);
     }
 
     for (index = 0; index < metadata.NUMBER_OF_CUSTOM_DESC; index++) {

@@ -19,28 +19,16 @@ PROBAND = ['NOT_A_PROBAND', 'ABOVE_LEFT', 'ABOVE_RIGHT', 'BELOW_LEFT',
     'BELOW_RIGHT', 'LEFT', 'RIGHT']
 SEX = ['MALE', 'FEMALE', 'UNKNOWN']
 ANNOTATION_1 = {
-    ('00000000', '00000000'): 'NONE',
-    ('00000010', '00000001'): 'FILL',
-    ('00000010', '00000000'): 'FILL2', # BAR in combination with P or SB?
-    ('00000011', '00000000'): 'DOT',
-    ('00000100', '00000000'): 'QUESTION',
-    ('00000101', '00000000'): 'RIGHT-UPPER',
-    ('00000110', '00000000'): 'RIGHT-LOWER',
-    ('00001000', '00000000'): 'LEFT-UPPER',
-    ('00000111', '00000000'): 'LEFT-LOWER'
+    0b00000000: 'NONE',
+    0b00000001: 'P',
+    0b00000010: 'UNBORN',
+    0b00000011: 'ABORTED',
+    0b00000100: 'SB',
+    0b00001011: 'BAR'
 }
 ANNOTATION_2 = {
-    '00000000': 'NONE',
-    '00000001': 'P',  
-    '00000100': 'SB', 
-    '00001011': 'BAR',
-    '00000010': 'UNBORN',
-    '00000011': 'ABORTED'
-}
-ANNOTATION_3 = {
-    '00000000': 'NONE',
-    '00010100': '+',
-    '00010101': '-'
+    0b00000000: 'NONE',
+    0b00000001: 'FILL',
 }
 RELATIONSHIP = {
     0b00000100: 'SEPARATED',
@@ -76,7 +64,7 @@ def _raw(data):
 
 
 def _bit(data):
-    return '{0:08b}'.format(ord(data))
+    return '{:08b}'.format(ord(data))
 
 
 def _comment(data):
@@ -121,7 +109,7 @@ def _date(data):
             return 'DEFINED'
 
         # This is needed because strftime does not accept years before 1900.
-        date = time.strptime('{0:07d}'.format(date_int), '%Y%j')
+        date = time.strptime('{:07d}'.format(date_int), '%Y%j')
         return '{}-{}-{}'.format(date.tm_mday, date.tm_mon, date.tm_year)
 
     return 'UNKNOWN'
@@ -159,6 +147,7 @@ class FamParser(object):
         self.relationships = container.Container()
         self.text = []
         self.crossovers = []
+        self.desc_prefix = "DESC_"
         self.debug = debug
         self.experimental = experimental
         self.extracted = 0
@@ -188,7 +177,7 @@ class FamParser(object):
             destination[name] = function(field)
             self.extracted += extracted
         elif self.debug:
-            destination['_RAW_{0:02d}'.format(
+            destination['_RAW_{:02d}'.format(
                 destination['_RAW_FIELDS'])] = _raw(field)
             destination['_RAW_FIELDS'] += 1
 
@@ -252,19 +241,19 @@ class FamParser(object):
 
         crossover['ID'] = person_id
         while alleles < 2:
-            flag = 'FLAG_{0:02d}'.format(events)
+            flag = 'FLAG_{:02d}'.format(events)
 
             self._set_field(crossover, 1, flag, _raw)
             if crossover[flag] == '22':
                 self._set_field(crossover, 9,
-                    'ALLELE_{0:02d}'.format(alleles), _raw)
+                    'ALLELE_{:02d}'.format(alleles), _raw)
                 if not alleles:
                     self._set_field(crossover, 2,
-                        'SPACER_{0:02d}'.format(alleles), _raw)
+                        'SPACER_{:02d}'.format(alleles), _raw)
                 alleles += 1
             else:
                 self._set_field(crossover, 11,
-                    'CROSSOVER_{0:02d}'.format(events), _raw)
+                    'CROSSOVER_{:02d}'.format(events), _raw)
             events += 1
 
         self.crossovers.append(crossover)
@@ -309,27 +298,29 @@ class FamParser(object):
             self._parse_relationship(member['ID'])
 
         self._set_field(member, 4)
-        self._set_field(member, 1, 'FLAGS_1', _bit)
+        self._set_field(member, 1, 'FLAGS_1', _int)
         self._set_field(member, 2)
         self._set_field(member, 1, 'PROBAND', _proband)
         self._set_field(member, 1, 'X_COORDINATE', _int)
         self._set_field(member, 1)
         self._set_field(member, 1, 'Y_COORDINATE', _int)
         self._set_field(member, 1)
-        self._set_field(member, 1, 'FLAGS_2', _bit)
+        self._set_field(member, 1, 'FLAGS_2', _int)
         self._set_field(member, 4)
 
         self._parse_crossover(member['ID'])
 
-        self._set_field(member, 1, 'FLAGS_3', _bit)
+        self._set_field(member, 1, 'FLAGS_3', _int)
         self._set_field(member, 180)
-        self._set_field(member, 1, 'FLAGS_4', _bit)
+        self._set_field(member, 1, 'FLAGS_4', _int)
         self._set_field(member, 24)
 
-        member['ANNOTATION_1'] = ANNOTATION_1[(member['FLAGS_1'],
-            member['FLAGS_3'])]
-        member['ANNOTATION_2'] = ANNOTATION_2[(member['FLAGS_2'])]
-        member['ANNOTATION_3'] = ANNOTATION_3[(member['FLAGS_4'])]
+        member['ANNOTATION_1'] = ANNOTATION_1[(member['FLAGS_2'])]
+        member['ANNOTATION_2'] = ANNOTATION_2[(member['FLAGS_3'])]
+        member['DESCRIPTION_1'] = '{}{:02d}'.format(self.desc_prefix,
+            member['FLAGS_1'])
+        member['DESCRIPTION_2'] = '{}{:02d}'.format(self.desc_prefix,
+            member['FLAGS_4'])
 
         self.members.append(member)
 
@@ -361,13 +352,13 @@ class FamParser(object):
 
         for description in range(23):
             self._set_field(self.metadata, 0,
-                'DESC_{0:02d}'.format(description), _identity)
+                '{}{:02d}'.format(self.desc_prefix, description), _identity)
 
         for description in range(self.metadata['NUMBER_OF_CUSTOM_DESC']):
             self._set_field(self.metadata, 0,
-                'CUSTOM_DESC_{0:02d}'.format(description), _identity)
+                'CUSTOM_DESC_{:02d}'.format(description), _identity)
             self._set_field(self.metadata, 0,
-                'CUSTOM_CHAR_{0:02d}'.format(description), _identity)
+                'CUSTOM_CHAR_{:02d}'.format(description), _identity)
 
         self._set_field(self.metadata, 14)
         self._set_field(self.metadata, 2, 'ZOOM', _int)
