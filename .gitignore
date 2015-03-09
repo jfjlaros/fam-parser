@@ -1,4 +1,5 @@
+*.pyc
+*.egg-info
 build
 dist
-*.egg-info
-*.pyc
+node_modules

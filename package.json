@@ -1,0 +1,25 @@
+{
+  "name": "fam-parser",
+  "version": "0.0.1",
+  "description": "FAM file parser",
+  "homepage": "https://git.lumc.nl/pedigree/fam-parser",
+  "main": "javascript/index.js",
+  "bin": "./javascript/cli.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://git.lumc.nl/pedigree/fam-parser.git"
+  },
+  "keywords": [
+    "fam",
+    "pedigree",
+    "parser"
+  ],
+  "author": {
+    "name": "Jeroen F.J. Laros",
+    "email": "J.F.J.Laros@lumc.nl"
+  },
+  "license": "MIT"
+}
