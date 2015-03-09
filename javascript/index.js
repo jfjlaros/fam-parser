@@ -398,7 +398,7 @@ function FamParser(fileContent) {
   /*
   Parse a FAM file.
   */
-  this.parse = function() {
+  function parse() {
     var index;
 
     parseHeader();
@@ -410,7 +410,7 @@ function FamParser(fileContent) {
     for (index = 0; index < metadata.NUMBER_OF_TEXT_FIELDS; index++) {
       parseText();
     }
-  };
+  }
 
   /*
   Write the parsed FAM file to the console.
@@ -444,11 +444,25 @@ function FamParser(fileContent) {
       console.log(texts[index]);
     }
   };
+
+  /*
+  Get an array of member objects.
+  */
+  this.getMembers = function() {
+    return members;
+  };
+
+  /*
+  Get an array of relationship objects.
+  */
+  this.getRelationships = function() {
+    return Object.keys(relationships).map(function(key) {
+      return relationships[key];
+    });
+  };
+
+  parse();
 }
 
-// NOTE: Remove this after integration.
-var fs = require('fs'),
-    FP = new FamParser(fs.readFileSync(
-  '../data/example.fam').toString('binary'));
-FP.parse();
-FP.dump();
+
+module.exports = FamParser;
