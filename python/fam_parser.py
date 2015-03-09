@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 FAM parser.
 
@@ -12,7 +10,7 @@ import argparse
 import sys
 import time
 
-import container
+from . import container
 
 
 PROBAND = ['NOT_A_PROBAND', 'ABOVE_LEFT', 'ABOVE_RIGHT', 'BELOW_LEFT',
@@ -472,7 +470,3 @@ def main():
             if k not in ('func', 'subcommand')))
     except ValueError as error:
         parser.error(error)
-
-
-if __name__ == '__main__':
-    main()

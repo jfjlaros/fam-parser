@@ -1,12 +1,15 @@
-# Development of the FAM parser
+# FAM file parser
 
-## Preparations
+
+## Development of the FAM parser
+
+### Preparations
 First, make sure that `wine` is installed and that your CPU allows execution of
 16-bit instructions:
 
     echo 1 > /proc/sys/abi/ldt16
 
-## Reverse engineering
+### Reverse engineering
 Run Cyrillic:
 
     wine cyrillic.exe
@@ -17,7 +20,7 @@ And start editing a pedigree. Use `xxd` and `watch` to find differences:
 
 Press `Ctrl+c` to clear the highlights.
 
-## Debugging
+### Debugging
 If something is wrong, then probably a skipped field is now assumed to be of
 fixed size, while it should be of variable size. To find the offending field,
 add the following line to the function `_set_field`:
