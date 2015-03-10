@@ -11,7 +11,7 @@ Licensed under the MIT license, see the LICENSE file.
 from .fam_parser import FamParser, fam_parser
 
 
-__version_info__ = ('0', '0', '1')
+__version_info__ = ('0', '0', '2')
 __date__ = '9 Mar 2015'
 
 
