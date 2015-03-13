@@ -7,11 +7,7 @@ A library for parsing FAM files from Python or Javascript.
 
 Installation:
 
-    python setup.py install
-
-Command line invocation:
-
-    fam_parser data/example.fam -
+    pip install -e 'git+https://git.lumc.nl/nested/fam-parser.git#egg=fam_parser'
 
 Use as a library:
 
@@ -19,31 +15,48 @@ Use as a library:
     from fam_parser import FamParser
 
     parser = FamParser()
-    parser.read(open('data/example.fam'))
+    parser.read(open(example.fam'))
     parser.write(sys.stdout)
+
+Command line invocation:
+
+    fam_parser example.fam -
+
+You can also invoke it directly from the repository root directory without
+installation:
+
+    python -m python.fam_parser example.fam -
 
 
 ## Javascript library
 
 Installation:
 
-    npm install .
-
-Command line invocation:
-
-    fam-parser data/example.fam
+    npm install 'git+https://git.lumc.nl/nested/fam-parser.git'
 
 Use as a library:
 
     var FamParser = require('fam-parser');
 
     var parser = new FamParser(fs.readFileSync(
-      'data/example.fam').toString('binary')
+      'example.fam').toString('binary')
     );
 
     parser.getMembers().forEach(function(member) {
       console.log(member.SURNAME);
     });
+
+Command line invocation:
+
+    node_modules/.bin/fam-parser example.fam
+
+(Or, if you installed globally using `npm install -g`, the `fam-parser` binary
+should be in your `$PATH`.)
+
+You can also invoke it directly from the repository root directory without
+installation:
+
+    node javascript/cli.js example.fam
 
 
 ## Development of the FAM parser
