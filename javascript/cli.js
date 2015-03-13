@@ -16,7 +16,7 @@ var main = function(filename) {
 
 
 var exitCode = main(
-  path.resolve(process.cwd(), process.argv[1])
+  path.resolve(process.cwd(), process.argv[2])
 );
 
 
