@@ -470,3 +470,7 @@ def main():
             if k not in ('func', 'subcommand')))
     except ValueError as error:
         parser.error(error)
+
+
+if __name__ == '__main__':
+    main()
