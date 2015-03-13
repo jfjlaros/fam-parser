@@ -48,7 +48,7 @@ Use as a library:
 
 Command line invocation:
 
-    node_modules/.bin/fam-parser example.fam
+    ./node_modules/.bin/fam-parser example.fam
 
 (Or, if you installed globally using `npm install -g`, the `fam-parser` binary
 should be in your `$PATH`.)
