@@ -10,6 +10,8 @@ FAM parser.
 var PROBAND = ['NOT_A_PROBAND', 'ABOVE_LEFT', 'ABOVE_RIGHT', 'BELOW_LEFT',
       'BELOW_RIGHT', 'LEFT', 'RIGHT'],
     SEX = ['MALE', 'FEMALE', 'UNKNOWN'],
+    TWIN_STATUS = ['NONE', 'MONOZYGOUS', 'DIZYGOUS', 'UNKNOWN', 'TRIPLET',
+      'QUADRUPLET', 'QUINTUPLET', 'SEXTUPLET'],
     ANNOTATION_1 = {
       0x00: 'NONE',
       0x01: 'P',
@@ -85,6 +87,10 @@ function proband(data) {
 
 function sex(data) {
   return SEX[data.charCodeAt(0)];
+}
+
+function twinStatus(data) {
+  return TWIN_STATUS[data.charCodeAt(0)];
 }
 
 function relation(data) {
@@ -323,7 +329,8 @@ function FamParser(fileContent) {
       parseRelationship(member.ID);
     }
 
-    setField(member, 4);
+    setField(member, 1, 'TWIN_ID', integer);
+    setField(member, 3);
     setField(member, 1, 'FLAGS_1', integer);
     setField(member, 2);
     setField(member, 1, 'PROBAND', proband);
@@ -332,7 +339,8 @@ function FamParser(fileContent) {
     setField(member, 1, 'Y_COORDINATE', integer);
     setField(member, 1);
     setField(member, 1, 'FLAGS_2', integer);
-    setField(member, 4);
+    setField(member, 1, 'TWIN_STATUS', twinStatus);
+    setField(member, 3);
 
     parseCrossover(member.ID);
 

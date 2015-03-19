@@ -16,6 +16,8 @@ from . import container
 PROBAND = ['NOT_A_PROBAND', 'ABOVE_LEFT', 'ABOVE_RIGHT', 'BELOW_LEFT',
     'BELOW_RIGHT', 'LEFT', 'RIGHT']
 SEX = ['MALE', 'FEMALE', 'UNKNOWN']
+TWIN_STATUS = ['NONE', 'MONOZYGOUS', 'DIZYGOUS', 'UNKNOWN', 'TRIPLET',
+    'QUADRUPLET', 'QUINTUPLET', 'SEXTUPLET']
 ANNOTATION_1 = {
     0b00000000: 'NONE',
     0b00000001: 'P',
@@ -48,6 +50,10 @@ def _proband(data):
 
 def _sex(data):
     return SEX[ord(data)]
+
+
+def _twin_status(data):
+    return TWIN_STATUS[ord(data)]
 
 
 def _relation(data):
@@ -295,7 +301,8 @@ class FamParser(object):
         for spouse in range(member['NUMBER_OF_SPOUSES']):
             self._parse_relationship(member['ID'])
 
-        self._set_field(member, 4)
+        self._set_field(member, 1, 'TWIN_ID', _int)
+        self._set_field(member, 3)
         self._set_field(member, 1, 'FLAGS_1', _int)
         self._set_field(member, 2)
         self._set_field(member, 1, 'PROBAND', _proband)
@@ -304,7 +311,8 @@ class FamParser(object):
         self._set_field(member, 1, 'Y_COORDINATE', _int)
         self._set_field(member, 1)
         self._set_field(member, 1, 'FLAGS_2', _int)
-        self._set_field(member, 4)
+        self._set_field(member, 1, 'TWIN_STATUS', _twin_status)
+        self._set_field(member, 3)
 
         self._parse_crossover(member['ID'])
 
