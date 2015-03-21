@@ -13,6 +13,8 @@ import time
 from . import container
 
 
+DESC_PREFIX = "DESC_"
+
 MAPS = {
     'PROBAND': {
         0x00: 'NOT_A_PROBAND',
@@ -88,6 +90,10 @@ def _comment(data):
 
 def _text(data):
     return data.split(chr(0x0b) + chr(0x0b))
+
+
+def _description(data):
+    return '{}{:02d}'.format(DESC_PREFIX, ord(data))
 
 
 def _int(data):
@@ -198,7 +204,6 @@ class FamParser(object):
         self.relationships = container.Container()
         self.text = []
         self.crossovers = []
-        self.desc_prefix = "DESC_"
         self.debug = debug
         self.experimental = experimental
         self.extracted = 0
@@ -349,7 +354,7 @@ class FamParser(object):
 
         self._set_field(member, 1, 'TWIN_ID', _int)
         self._set_field(member, 3)
-        self._set_field(member, 1, 'FLAGS_1', _int)
+        self._set_field(member, 1, 'DESCRIPTION_1', _description)
         self._set_field(member, 1)
         self._set_field(member, 1, 'FLAGS_5', _int)
         self._set_field(member, 1, 'PROBAND', _annotate)
@@ -365,13 +370,8 @@ class FamParser(object):
 
         self._set_field(member, 1, 'ANNOTATION_2', _annotate)
         self._set_field(member, 180)
-        self._set_field(member, 1, 'FLAGS_4', _int)
+        self._set_field(member, 1, 'DESCRIPTION_2', _description)
         self._set_field(member, 24)
-
-        member['DESCRIPTION_1'] = '{}{:02d}'.format(self.desc_prefix,
-            member['FLAGS_1'])
-        member['DESCRIPTION_2'] = '{}{:02d}'.format(self.desc_prefix,
-            member['FLAGS_4'])
 
         _flags(member, member['FLAGS_5'], 'ANNOTATION_3')
 
@@ -405,7 +405,7 @@ class FamParser(object):
 
         for description in range(23):
             self._set_field(self.metadata, 0,
-                '{}{:02d}'.format(self.desc_prefix, description), _identity)
+                '{}{:02d}'.format(DESC_PREFIX, description), _identity)
 
         for description in range(self.metadata['NUMBER_OF_CUSTOM_DESC']):
             self._set_field(self.metadata, 0,
