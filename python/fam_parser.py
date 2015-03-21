@@ -13,7 +13,7 @@ import time
 from . import container
 
 
-DESC_PREFIX = "DESC_"
+DESC_PREFIX = 'DESC_'
 
 MAPS = {
     'PROBAND': {
@@ -43,19 +43,19 @@ MAPS = {
     'ANNOTATION_1': {
         0x00: 'NONE',
         0x01: 'P',
-        0x02: 'UNBORN',
-        0x03: 'ABORTED',
+        0x02: 'SAB',
+        0x03: 'TOP',
         0x04: 'SB',
         0x0b: 'BAR'
     },
     'ANNOTATION_2': {
         0x00: 'NONE',
-        0x01: 'FILL',
+        0x01: 'AFFECTED',
     }
 }
 
 FLAGS = {
-    'ANNOTATION_3': {
+    'INDIVIDUAL': {
         0x04: 'LOOP_BREAKPOINT',
         0x08: 'HIDE_INFO',
     },
@@ -146,7 +146,7 @@ def _annotate(data, annotation):
     :return str: Annotated representation of {data}.
     """
     index = ord(data)
-    
+
     if index in MAPS[annotation]:
         return MAPS[annotation][index]
     return '{:02x}'.format(index)
@@ -160,16 +160,14 @@ def _flags(destination, bitfield, annotation):
     :arg int bitfield: Bit field.
     :arg str annotation: Annotation of {bitfield}.
     """
-    for index in range(8):
-        flag = 2 ** index
+    for flag in map(lambda x: 2 ** x, range(8)):
         value = bool(flag & bitfield)
 
         if flag not in FLAGS[annotation]:
             if value:
-                destination['FLAGS_{}_{:02x}'.format(annotation, flag)] = str(
-                    value)
+                destination['FLAGS_{}_{:02x}'.format(annotation, flag)] = value
         else:
-            destination[FLAGS[annotation][flag]] = str(value)
+            destination[FLAGS[annotation][flag]] = value
 
 
 def _block_write(string, block_size, stream=sys.stdout):
@@ -197,7 +195,7 @@ class FamParser(object):
         :arg bool experimental: Enable experimental features.
         :arg bool debug: Enable debugging output.
         """
-        self.data = ""
+        self.data = ''
         self.offset = 0
         self.metadata = container.Container()
         self.members = []
@@ -232,7 +230,7 @@ class FamParser(object):
 
         if name:
             if function == _annotate:
-                destination[name] = function(field, name)
+                destination[name] = _annotate(field, name)
             else:
                 destination[name] = function(field)
             self.extracted += extracted
@@ -356,7 +354,7 @@ class FamParser(object):
         self._set_field(member, 3)
         self._set_field(member, 1, 'DESCRIPTION_1', _description)
         self._set_field(member, 1)
-        self._set_field(member, 1, 'FLAGS_5', _int)
+        self._set_field(member, 1, 'INDIVIDUAL_FLAGS', _int)
         self._set_field(member, 1, 'PROBAND', _annotate)
         self._set_field(member, 1, 'X_COORDINATE', _int)
         self._set_field(member, 1)
@@ -373,7 +371,7 @@ class FamParser(object):
         self._set_field(member, 1, 'DESCRIPTION_2', _description)
         self._set_field(member, 24)
 
-        _flags(member, member['FLAGS_5'], 'ANNOTATION_3')
+        _flags(member, member['INDIVIDUAL_FLAGS'], 'INDIVIDUAL')
 
         self.members.append(member)
 
@@ -430,7 +428,7 @@ class FamParser(object):
         :arg stream output_handle: Open writable handle.
         """
         for key, value in dictionary.items():
-            output_handle.write("{}: {}\n".format(key, value))
+            output_handle.write('{}: {}\n'.format(key, value))
 
 
     def read(self, input_handle):
