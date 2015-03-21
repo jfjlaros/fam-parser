@@ -13,26 +13,56 @@ import time
 from . import container
 
 
-PROBAND = ['NOT_A_PROBAND', 'ABOVE_LEFT', 'ABOVE_RIGHT', 'BELOW_LEFT',
-    'BELOW_RIGHT', 'LEFT', 'RIGHT']
-SEX = ['MALE', 'FEMALE', 'UNKNOWN']
-TWIN_STATUS = ['NONE', 'MONOZYGOUS', 'DIZYGOUS', 'UNKNOWN', 'TRIPLET',
-    'QUADRUPLET', 'QUINTUPLET', 'SEXTUPLET']
-ANNOTATION_1 = {
-    0b00000000: 'NONE',
-    0b00000001: 'P',
-    0b00000010: 'UNBORN',
-    0b00000011: 'ABORTED',
-    0b00000100: 'SB',
-    0b00001011: 'BAR'
+MAPS = {
+    'PROBAND': {
+        0x00: 'NOT_A_PROBAND',
+        0x01: 'ABOVE_LEFT',
+        0x02: 'ABOVE_RIGHT',
+        0x03: 'BELOW_LEFT',
+        0x04: 'BELOW_RIGHT',
+        0x05: 'LEFT',
+        0x06: 'RIGHT'
+    },
+    'SEX': {
+        0x00: 'MALE',
+        0x01: 'FEMALE',
+        0x02: 'UNKNOWN'
+    },
+    'TWIN_STATUS': {
+        0x00: 'NONE',
+        0x01: 'MONOZYGOUS',
+        0x02: 'DIZYGOUS',
+        0x03: 'UNKNOWN',
+        0x04: 'TRIPLET',
+        0x05: 'QUADRUPLET',
+        0x06: 'QUINTUPLET',
+        0x07: 'SEXTUPLET'
+    },
+    'ANNOTATION_1': {
+        0x00: 'NONE',
+        0x01: 'P',
+        0x02: 'UNBORN',
+        0x03: 'ABORTED',
+        0x04: 'SB',
+        0x0b: 'BAR'
+    },
+    'ANNOTATION_2': {
+        0x00: 'NONE',
+        0x01: 'FILL',
+    }
 }
-ANNOTATION_2 = {
-    0b00000000: 'NONE',
-    0b00000001: 'FILL',
-}
-RELATIONSHIP = {
-    0b00000100: 'SEPARATED',
-    0b00001000: 'DIVORCED'
+
+FLAGS = {
+    'ANNOTATION_3': {
+        0x04: 'LOOP_BREAKPOINT',
+        0x08: 'HIDE_INFO',
+    },
+    'RELATIONSHIP': {
+        0x01: 'INFORMAL',
+        0x02: 'CONSANGUINEOUS',
+        0x04: 'SEPARATED',
+        0x08: 'DIVORCED'
+    }
 }
 
 
@@ -42,25 +72,6 @@ def _identity(data):
 
 def _trim(data, delimiter=chr(0x00)):
     return data.split(delimiter)[0]
-
-
-def _proband(data):
-    return PROBAND[ord(data)]
-
-
-def _sex(data):
-    return SEX[ord(data)]
-
-
-def _twin_status(data):
-    return TWIN_STATUS[ord(data)]
-
-
-def _relation(data):
-    for relation in RELATIONSHIP:
-        if data & relation:
-            return RELATIONSHIP[data]
-    return 'NORMAL'
 
 
 def _raw(data):
@@ -119,6 +130,42 @@ def _date(data):
     return 'UNKNOWN'
 
 
+def _annotate(data, annotation):
+    """
+    Replace a value with its annotation.
+
+    :arg str data: Encoded data.
+    :arg dict annotation: Annotation of {data}.
+
+    :return str: Annotated representation of {data}.
+    """
+    index = ord(data)
+    
+    if index in MAPS[annotation]:
+        return MAPS[annotation][index]
+    return '{:02x}'.format(index)
+
+
+def _flags(destination, bitfield, annotation):
+    """
+    Explode a bitfield into flags.
+
+    :arg dict destination: Destination dictionary.
+    :arg int bitfield: Bit field.
+    :arg str annotation: Annotation of {bitfield}.
+    """
+    for index in range(8):
+        flag = 2 ** index
+        value = bool(flag & bitfield)
+
+        if flag not in FLAGS[annotation]:
+            if value:
+                destination['FLAGS_{}_{:02x}'.format(annotation, flag)] = str(
+                    value)
+        else:
+            destination[FLAGS[annotation][flag]] = str(value)
+
+
 def _block_write(string, block_size, stream=sys.stdout):
     """
     Write a string as a block of width {block_size}. This function is mainly
@@ -167,6 +214,7 @@ class FamParser(object):
         :arg int size: Size of fixed size field.
         :arg str name: Field name.
         :arg function function: Conversion function.
+        :arg unknown parameter: Optional parameter for {function}.
         :arg str delimiter: Delimeter for variable size field.
         """
         # TODO: Perhaps use the file handle instead of self.data.
@@ -178,7 +226,10 @@ class FamParser(object):
             extracted = len(field) + 1
 
         if name:
-            destination[name] = function(field)
+            if function == _annotate:
+                destination[name] = function(field, name)
+            else:
+                destination[name] = function(field)
             self.extracted += extracted
         elif self.debug:
             destination['_RAW_{:02d}'.format(
@@ -221,12 +272,7 @@ class FamParser(object):
         self._set_field(relationship, 1, 'RELATION_FLAGS', _int)
         self._set_field(relationship, 0, 'RELATION_NAME')
 
-        relation_flags = relationship['RELATION_FLAGS']
-        relationship['RELATION_STATUS'] = _relation(relation_flags)
-        relationship['RELATION_IS_INFORMAL'] = str(bool(relation_flags &
-            0b00000001))
-        relationship['RELATION_IS_CONSANGUINEOUS'] = str(bool(relation_flags &
-            0b00000010))
+        _flags(relationship, relationship['RELATION_FLAGS'], 'RELATIONSHIP')
 
         key = tuple(sorted((person_id, relationship['MEMBER_2_ID'])))
         if not self.relationships[key]:
@@ -280,7 +326,7 @@ class FamParser(object):
         self._set_field(member, 1)
         self._set_field(member, 3, 'DATE_OF_DEATH', _date)
         self._set_field(member, 1)
-        self._set_field(member, 1, 'SEX', _sex)
+        self._set_field(member, 1, 'SEX', _annotate)
         self._set_field(member, 1, 'ID', _int)
         self._set_field(member, 1)
         self._set_field(member, 1, 'UNKNOWN_1', _int)
@@ -304,29 +350,30 @@ class FamParser(object):
         self._set_field(member, 1, 'TWIN_ID', _int)
         self._set_field(member, 3)
         self._set_field(member, 1, 'FLAGS_1', _int)
-        self._set_field(member, 2)
-        self._set_field(member, 1, 'PROBAND', _proband)
+        self._set_field(member, 1)
+        self._set_field(member, 1, 'FLAGS_5', _int)
+        self._set_field(member, 1, 'PROBAND', _annotate)
         self._set_field(member, 1, 'X_COORDINATE', _int)
         self._set_field(member, 1)
         self._set_field(member, 1, 'Y_COORDINATE', _int)
         self._set_field(member, 1)
-        self._set_field(member, 1, 'FLAGS_2', _int)
-        self._set_field(member, 1, 'TWIN_STATUS', _twin_status)
+        self._set_field(member, 1, 'ANNOTATION_1', _annotate)
+        self._set_field(member, 1, 'TWIN_STATUS', _annotate)
         self._set_field(member, 3)
 
         self._parse_crossover(member['ID'])
 
-        self._set_field(member, 1, 'FLAGS_3', _int)
+        self._set_field(member, 1, 'ANNOTATION_2', _annotate)
         self._set_field(member, 180)
         self._set_field(member, 1, 'FLAGS_4', _int)
         self._set_field(member, 24)
 
-        member['ANNOTATION_1'] = ANNOTATION_1[(member['FLAGS_2'])]
-        member['ANNOTATION_2'] = ANNOTATION_2[(member['FLAGS_3'])]
         member['DESCRIPTION_1'] = '{}{:02d}'.format(self.desc_prefix,
             member['FLAGS_1'])
         member['DESCRIPTION_2'] = '{}{:02d}'.format(self.desc_prefix,
             member['FLAGS_4'])
+
+        _flags(member, member['FLAGS_5'], 'ANNOTATION_3')
 
         self.members.append(member)
 
