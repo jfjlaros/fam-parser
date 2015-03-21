@@ -7,31 +7,69 @@ FAM parser.
 */
 // NOTE: All IDs are probably 2 bytes.
 
-var PROBAND = ['NOT_A_PROBAND', 'ABOVE_LEFT', 'ABOVE_RIGHT', 'BELOW_LEFT',
-      'BELOW_RIGHT', 'LEFT', 'RIGHT'],
-    SEX = ['MALE', 'FEMALE', 'UNKNOWN'],
-    TWIN_STATUS = ['NONE', 'MONOZYGOUS', 'DIZYGOUS', 'UNKNOWN', 'TRIPLET',
-      'QUADRUPLET', 'QUINTUPLET', 'SEXTUPLET'],
-    ANNOTATION_1 = {
-      0x00: 'NONE',
-      0x01: 'P',
-      0x02: 'UNBORN',
-      0x03: 'ABORTED',
-      0x04: 'SB',
-      0x0b: 'BAR'
+var DESC_PREFIX = 'DESC_',
+    MAPS = {
+      'PROBAND': {
+        0x00: 'NOT_A_PROBAND',
+        0x01: 'ABOVE_LEFT',
+        0x02: 'ABOVE_RIGHT',
+        0x03: 'BELOW_LEFT',
+        0x04: 'BELOW_RIGHT',
+        0x05: 'LEFT',
+        0x06: 'RIGHT'
+      },
+      'SEX': {
+        0x00: 'MALE',
+        0x01: 'FEMALE',
+        0x02: 'UNKNOWN'
+      },
+      'TWIN_STATUS': {
+        0x00: 'NONE',
+        0x01: 'MONOZYGOUS',
+        0x02: 'DIZYGOUS',
+        0x03: 'UNKNOWN',
+        0x04: 'TRIPLET',
+        0x05: 'QUADRUPLET',
+        0x06: 'QUINTUPLET',
+        0x07: 'SEXTUPLET'
+      },
+      'ANNOTATION_1': {
+        0x00: 'NONE',
+        0x01: 'P',
+        0x02: 'SAB',
+        0x03: 'TOP',
+        0x04: 'SB',
+        0x0b: 'BAR'
+      },
+      'ANNOTATION_2': {
+        0x00: 'NONE',
+        0x01: 'AFFECTED'
+      }
     },
-    ANNOTATION_2 = {
-      0x00: 'NONE',
-      0x01: 'FILL'
-    },
-    RELATIONSHIP = {
-      0x04: 'SEPARATED',
-      0x08: 'DIVORCED'
+    FLAGS = {
+      'INDIVIDUAL': {
+        0x04: 'LOOP_BREAKPOINT',
+        0x08: 'HIDE_INFO'
+      },
+      'RELATIONSHIP': {
+        0x01: 'INFORMAL',
+        0x02: 'CONSANGUINEOUS',
+        0x04: 'SEPARATED',
+        0x08: 'DIVORCED'
+      }
     };
 
 /*
 Miscellaneous functions.
 */
+
+function ord(character) {
+  return character.charCodeAt(0);
+}
+
+function hex(value) {
+  return value.toString(16)
+}
 
 /*
 Pad a string with leading zeroes.
@@ -64,7 +102,7 @@ function convertToHex(data) {
       index;
 
   for (index = 0; index < data.length; index++) {
-    result += pad(data.charCodeAt(index).toString(16), 2);
+    result += pad(hex(data.charCodeAt(index)), 2);
   }
   return result;
 }
@@ -81,35 +119,12 @@ function trim(data) {
   return data.split(String.fromCharCode(0x00))[0];
 }
 
-function proband(data) {
-  return PROBAND[data.charCodeAt(0)];
-}
-
-function sex(data) {
-  return SEX[data.charCodeAt(0)];
-}
-
-function twinStatus(data) {
-  return TWIN_STATUS[data.charCodeAt(0)];
-}
-
-function relation(data) {
-  var annotation;
-
-  for (annotation in RELATIONSHIP) {
-    if (data === parseInt(annotation)) {
-      return RELATIONSHIP[data];
-    }
-  }
-  return 'NORMAL';
-}
-
 function raw(data) {
   return convertToHex(data);
 }
 
 function bit(data) {
-  return pad(data.charCodeAt(0).toString(2), 8);
+  return pad(ord(data).toString(2), 8);
 }
 
 function comment(data) {
@@ -118,6 +133,10 @@ function comment(data) {
 
 function freetext(data) {
   return data.split(String.fromCharCode(0x0b) + String.fromCharCode(0x0b));
+}
+
+function description(data) {
+  return DESC_PREFIX + pad(ord(data), 2)
 }
 
 /*
@@ -165,6 +184,48 @@ function date(data) {
 }
 
 /*
+Replace a value with its annotation.
+
+:arg str data: Encoded data.
+:arg dict annotation: Annotation of {data}.
+
+:return str: Annotated representation of {data}.
+*/
+function annotate(data, annotation) {
+  var index = ord(data);
+
+  if (index in MAPS[annotation]) {
+    return MAPS[annotation][index];
+  }
+  return convertToHex(data);
+}
+
+/*
+Explode a bitfield into flags.
+
+:arg dict destination: Destination dictionary.
+:arg int bitfield: Bit field.
+:arg str annotation: Annotation of {bitfield}.
+*/
+function flags(destination, bitfield, annotation) {
+  var flag,
+      value;
+
+  for (flag = 0x01; flag < 0x100; flag <<= 1) {
+    value = Boolean(flag & bitfield);
+
+    if (!(flag in FLAGS[annotation])) {
+      if (value) {
+        destination['FLAGS_' + annotation + '_' + pad(hex(flag), 2)] = value;
+      }
+    }
+    else {
+      destination[FLAGS[annotation][flag]] = value;
+    }
+  }
+}
+
+/*
 FAM file parsing.
 */
 function FamParser(fileContent) {
@@ -175,8 +236,7 @@ function FamParser(fileContent) {
       members = [],
       relationships = {},
       texts = [],
-      crossovers = [],
-      desc_prefix = "DESC_";
+      crossovers = [];
 
   /*
   Extract a field from {data} using either a fixed size, or a delimiter. After
@@ -201,11 +261,16 @@ function FamParser(fileContent) {
     }
 
     if (name !== undefined) {
-      if (func === undefined) {
-        destination[name] = identity(field);
+      if (func !== undefined) {
+        if (func === annotate) {
+          destination[name] = annotate(field, name);
+        }
+        else {
+          destination[name] = func(field);
+        }
       }
       else {
-        destination[name] = func(field);
+        destination[name] = identity(field);
       }
     }
     offset += extracted;
@@ -246,10 +311,7 @@ function FamParser(fileContent) {
     setField(relationship, 1, 'RELATION_FLAGS', integer);
     setField(relationship, 0, 'RELATION_NAME');
 
-    relationFlags = relationship.RELATION_FLAGS;
-    relationship.RELATION_STATUS = relation(relationFlags);
-    relationship.RELATION_IS_INFORMAL = Boolean(relationFlags & 0x01);
-    relationship.RELATION_IS_CONSANGUINEOUS = Boolean(relationFlags & 0x02);
+    flags(relationship, relationship['RELATION_FLAGS'], 'RELATIONSHIP');
 
     key = [personId, relationship.MEMBER_2_ID].sort().toString();
     if (relationships[key] === undefined) {
@@ -307,7 +369,7 @@ function FamParser(fileContent) {
     setField(member, 1);
     setField(member, 3, 'DATE_OF_DEATH', date);
     setField(member, 1);
-    setField(member, 1, 'SEX', sex);
+    setField(member, 1, 'SEX', annotate);
     setField(member, 1, 'ID', integer);
     setField(member, 1);
     setField(member, 1, 'UNKNOWN_1', integer);
@@ -331,29 +393,26 @@ function FamParser(fileContent) {
 
     setField(member, 1, 'TWIN_ID', integer);
     setField(member, 3);
-    setField(member, 1, 'FLAGS_1', integer);
-    setField(member, 2);
-    setField(member, 1, 'PROBAND', proband);
+    setField(member, 1, 'DESCRIPTION_1', description);
+    setField(member, 1);
+    setField(member, 1, 'INDIVIDUAL_FLAGS', integer);
+    setField(member, 1, 'PROBAND', annotate);
     setField(member, 1, 'X_COORDINATE', integer);
     setField(member, 1);
     setField(member, 1, 'Y_COORDINATE', integer);
     setField(member, 1);
-    setField(member, 1, 'FLAGS_2', integer);
-    setField(member, 1, 'TWIN_STATUS', twinStatus);
+    setField(member, 1, 'ANNOTATION_1', annotate);
+    setField(member, 1, 'TWIN_STATUS', annotate);
     setField(member, 3);
 
     parseCrossover(member.ID);
 
-    setField(member, 1, 'FLAGS_3', integer);
+    setField(member, 1, 'ANNOTATION_2', annotate);
     setField(member, 180);
-    setField(member, 1, 'FLAGS_4', integer);
+    setField(member, 1, 'DESCRIPTION_2', description);
     setField(member, 24);
 
-    member.ANNOTATION_1 = ANNOTATION_1[member.FLAGS_2];
-    member.ANNOTATION_2 = ANNOTATION_2[member.FLAGS_3];
-    member.DESCRIPTION_1 = desc_prefix + pad(member.FLAGS_1, 2);
-    member.DESCRIPTION_2 = desc_prefix + pad(member.FLAGS_4, 2);
-
+    flags(member, member['INDIVIDUAL_FLAGS'], 'INDIVIDUAL');
 
     members.push(member);
   }
@@ -386,7 +445,7 @@ function FamParser(fileContent) {
     setField(metadata, 1);
 
     for (index = 0; index < 23; index++) {
-      setField(metadata, 0, desc_prefix + pad(index, 2), identity);
+      setField(metadata, 0, DESC_PREFIX + pad(index, 2), identity);
     }
 
     for (index = 0; index < metadata.NUMBER_OF_CUSTOM_DESC; index++) {
