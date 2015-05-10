@@ -8,7 +8,6 @@ FAM parser.
 
 import argparse
 import sys
-import time
 
 from . import container
 
@@ -128,11 +127,7 @@ def _date(data):
     if date_int:
         if date_int == 0xFFFFFF:
             return 'DEFINED'
-
-        # This is needed because strftime does not accept years before 1900.
-        date = time.strptime('{:07d}'.format(date_int), '%Y%j')
-        return '{}-{}-{}'.format(date.tm_mday, date.tm_mon, date.tm_year)
-
+        return unicode(date_int)
     return 'UNKNOWN'
 
 
