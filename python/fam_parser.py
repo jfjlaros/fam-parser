@@ -397,7 +397,16 @@ class FamParser(object):
         """
         Extract information from the footer.
         """
-        self._set_field(self.metadata, 3)
+        self._set_field(self.metadata, 1, 'FOOT_SKIP', _int)
+        self._set_field(self.metadata, 2)
+
+        if self.metadata['FOOT_SKIP'] == 0x0a:
+            self._set_field(self.metadata, 120, 'FOOT_SKIP_DATA', _raw)
+            # If we print `FOOT_SKIP_DATA` in `FOOT_SKIP` lines, a nice
+            # pattern emerges. So probably we need to read `FOOT_SKIP` fields
+            # of size 12.
+            #_block_write(self.metadata['FOOT_SKIP_DATA'], 24)
+
         self._set_field(self.metadata, 1, 'NUMBER_OF_CUSTOM_DESC', _int)
         self._set_field(self.metadata, 1)
 
