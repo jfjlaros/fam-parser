@@ -13,6 +13,7 @@ from . import container
 
 
 DESC_PREFIX = 'DESC_'
+EOF_MARKER = 'End of File'
 
 MAPS = {
     'PROBAND': {
@@ -423,6 +424,14 @@ class FamParser(object):
         self._set_field(self.metadata, 1)
 
 
+    def _parse_trailer(self):
+        """
+        Extract information from the trailer.
+        """
+        self._set_field(self.metadata, 11, 'EOF_MARKER', _identity)
+        self._set_field(self.metadata, 15)
+
+
     def _write_dictionary(self, dictionary, output_handle):
         """
         Write the content of a dictionary to a stream.
@@ -449,6 +458,8 @@ class FamParser(object):
         self._parse_footer()
         for text in range(self.metadata['NUMBER_OF_TEXT_FIELDS']):
             self._parse_text()
+
+        self._parse_trailer()
 
 
     def write(self, output_handle):
@@ -479,10 +490,18 @@ class FamParser(object):
 
         if self.debug:
             output_handle.write('\n\n--- DEBUG INFO ---\n\n')
+
+            if self.metadata['EOF_MARKER'] == EOF_MARKER:
+                output_handle.write('EOF marker found.\n')
+            else:
+                output_handle.write('EOF marker not found.\n')
+
             output_handle.write(
                 'Extracted {}/{} bits ({}%).\n'.format(
                 self.extracted, len(self.data),
                 self.extracted * 100 // len(self.data)))
+            output_handle.write('Reached byte {} out of {}.\n'.format(
+                self.offset, len(self.data)))
 
 
 def fam_parser(input_handle, output_handle, experimental=False, debug=False):
