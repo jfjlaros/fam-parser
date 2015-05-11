@@ -364,7 +364,9 @@ class FamParser(object):
         self._set_field(member, 1, 'ANNOTATION_2', _annotate)
         self._set_field(member, 180)
         self._set_field(member, 1, 'DESCRIPTION_2', _description)
-        self._set_field(member, 24)
+        self._set_field(member, 1)
+        self._set_field(member, 0, 'UNKNOWN_TEXT', _identity)
+        self._set_field(member, 22)
 
         _flags(member, member['INDIVIDUAL_FLAGS'], 'INDIVIDUAL')
 
