@@ -458,6 +458,8 @@ class FamParser(object):
             self._parse_text()
 
         self._parse_trailer()
+        if self.metadata['EOF_MARKER'] != EOF_MARKER:
+            raise Exception('No EOF marker found.')
 
 
     def write(self, output_handle):
@@ -488,12 +490,6 @@ class FamParser(object):
 
         if self.debug:
             output_handle.write('\n\n--- DEBUG INFO ---\n\n')
-
-            if self.metadata['EOF_MARKER'] == EOF_MARKER:
-                output_handle.write('EOF marker found.\n')
-            else:
-                output_handle.write('EOF marker not found.\n')
-
             output_handle.write(
                 'Extracted {}/{} bits ({}%).\n'.format(
                 self.extracted, len(self.data),
