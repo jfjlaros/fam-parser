@@ -4,7 +4,7 @@ FAM parser.
 
 (C) 2015 Jeroen F.J. Laros <J.F.J.Laros@lumc.nl>
 """
-# NOTE: All IDs are probably 2 bytes.
+# NOTE: All integers are probably 2 bytes.
 
 import argparse
 import sys
@@ -246,15 +246,16 @@ class FamParser(object):
         self._set_field(self.metadata, 0, 'FAMILY_NAME')
         self._set_field(self.metadata, 0, 'FAMILY_ID')
         self._set_field(self.metadata, 0, 'AUTHOR')
-        self._set_field(self.metadata, 1, 'SIZE', _int)
-        self._set_field(self.metadata, 45)
+        self._set_field(self.metadata, 2, 'LAST_ID', _int)
+        self._set_field(self.metadata, 2, 'INTERNAL_ID_INCREMENT', _int)
+        self._set_field(self.metadata, 42)
         self._set_field(self.metadata, 0, 'COMMENT')
         self._set_field(self.metadata, 3, 'DATE_CREATED', _date)
         self._set_field(self.metadata, 1)
         self._set_field(self.metadata, 3, 'DATE_UPDATED', _date)
         self._set_field(self.metadata, 14)
-        self._set_field(self.metadata, 1, 'SELECTED_ID', _int)
-        self._set_field(self.metadata, 17)
+        self._set_field(self.metadata, 2, 'SELECTED_ID', _int)
+        self._set_field(self.metadata, 16)
 
 
     def _parse_relationship(self, person_id):
@@ -266,8 +267,7 @@ class FamParser(object):
         relationship = container.Container()
 
         relationship['MEMBER_1_ID'] = person_id
-        self._set_field(relationship, 1, 'MEMBER_2_ID', _int)
-        self._set_field(relationship, 1)
+        self._set_field(relationship, 2, 'MEMBER_2_ID', _int)
         self._set_field(relationship, 1, 'RELATION_FLAGS', _int)
         self._set_field(relationship, 0, 'RELATION_NAME')
 
@@ -326,16 +326,11 @@ class FamParser(object):
         self._set_field(member, 3, 'DATE_OF_DEATH', _date)
         self._set_field(member, 1)
         self._set_field(member, 1, 'SEX', _annotate)
-        self._set_field(member, 1, 'ID', _int)
-        self._set_field(member, 1)
-        self._set_field(member, 1, 'UNKNOWN_1', _int)
-        self._set_field(member, 1)
-        self._set_field(member, 1, 'MOTHER_ID', _int)
-        self._set_field(member, 1)
-        self._set_field(member, 1, 'FATHER_ID', _int)
-        self._set_field(member, 1)
-        self._set_field(member, 1, 'INTERNAL_ID', _int)
-        self._set_field(member, 1)
+        self._set_field(member, 2, 'ID', _int)
+        self._set_field(member, 2, 'PEDIGREE_NUMBER', _int)
+        self._set_field(member, 2, 'MOTHER_ID', _int)
+        self._set_field(member, 2, 'FATHER_ID', _int)
+        self._set_field(member, 2, 'INTERNAL_ID', _int)
         self._set_field(member, 1, 'NUMBER_OF_INDIVIDUALS', _int)
         self._set_field(member, 1)
         self._set_field(member, 0, 'AGE_GESTATION')
@@ -346,8 +341,8 @@ class FamParser(object):
         for spouse in range(member['NUMBER_OF_SPOUSES']):
             self._parse_relationship(member['ID'])
 
-        self._set_field(member, 1, 'TWIN_ID', _int)
-        self._set_field(member, 3)
+        self._set_field(member, 2, 'TWIN_ID', _int)
+        self._set_field(member, 2)
         self._set_field(member, 1, 'DESCRIPTION_1', _description)
         self._set_field(member, 1)
         self._set_field(member, 1, 'INDIVIDUAL_FLAGS', _int)
