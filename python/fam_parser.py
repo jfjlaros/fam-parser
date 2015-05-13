@@ -368,6 +368,8 @@ class FamParser(object):
 
         self.members.append(member)
 
+        return member['ID']
+
 
     def _parse_text(self):
         """
@@ -447,8 +449,9 @@ class FamParser(object):
         self.data = input_handle.read()
 
         self._parse_header()
-        for member in range(self.metadata['SIZE']):
-            self._parse_member()
+        if self.metadata['LAST_ID']:
+            while self._parse_member() != self.metadata['LAST_ID']:
+                pass
 
         self._parse_footer()
         for text in range(self.metadata['NUMBER_OF_TEXT_FIELDS']):
