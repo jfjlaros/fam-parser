@@ -5,9 +5,10 @@ FAM parser.
 
 (C) 2015 Jeroen F.J. Laros <J.F.J.Laros@lumc.nl>
 */
-// NOTE: All IDs are probably 2 bytes.
+// NOTE: All integers are probably 2 bytes.
 
 var DESC_PREFIX = 'DESC_',
+    EOF_MARKER = 'End of File',
     MAPS = {
       'PROBAND': {
         0x00: 'NOT_A_PROBAND',
@@ -284,15 +285,16 @@ function FamParser(fileContent) {
     setField(metadata, 0, 'FAMILY_NAME');
     setField(metadata, 0, 'FAMILY_ID');
     setField(metadata, 0, 'AUTHOR');
-    setField(metadata, 1, 'SIZE', integer);
-    setField(metadata, 45);
+    setField(metadata, 2, 'LAST_ID', integer);
+    setField(metadata, 2, 'INTERNAL_ID_INCREMENT', integer);
+    setField(metadata, 42);
     setField(metadata, 0, 'COMMENT');
     setField(metadata, 3, 'DATE_CREATED', date);
     setField(metadata, 1);
     setField(metadata, 3, 'DATE_UPDATED', date);
     setField(metadata, 14);
-    setField(metadata, 1, 'SELECTED_ID', integer);
-    setField(metadata, 17);
+    setField(metadata, 2, 'SELECTED_ID', integer);
+    setField(metadata, 16);
   }
 
   /*
@@ -306,8 +308,7 @@ function FamParser(fileContent) {
         key;
 
     relationship.MEMBER_1_ID = personId;
-    setField(relationship, 1, 'MEMBER_2_ID', integer);
-    setField(relationship, 1);
+    setField(relationship, 2, 'MEMBER_2_ID', integer);
     setField(relationship, 1, 'RELATION_FLAGS', integer);
     setField(relationship, 0, 'RELATION_NAME');
 
@@ -370,16 +371,11 @@ function FamParser(fileContent) {
     setField(member, 3, 'DATE_OF_DEATH', date);
     setField(member, 1);
     setField(member, 1, 'SEX', annotate);
-    setField(member, 1, 'ID', integer);
-    setField(member, 1);
-    setField(member, 1, 'UNKNOWN_1', integer);
-    setField(member, 1);
-    setField(member, 1, 'MOTHER_ID', integer);
-    setField(member, 1);
-    setField(member, 1, 'FATHER_ID', integer);
-    setField(member, 1);
-    setField(member, 1, 'INTERNAL_ID', integer);
-    setField(member, 1);
+    setField(member, 2, 'ID', integer);
+    setField(member, 2, 'PEDIGREE_NUMBER', integer);
+    setField(member, 2, 'MOTHER_ID', integer);
+    setField(member, 2, 'FATHER_ID', integer);
+    setField(member, 2, 'INTERNAL_ID', integer);
     setField(member, 1, 'NUMBER_OF_INDIVIDUALS', integer);
     setField(member, 1);
     setField(member, 0, 'AGE_GESTATION');
@@ -387,12 +383,12 @@ function FamParser(fileContent) {
     setField(member, 1, 'NUMBER_OF_SPOUSES', integer);
     setField(member, 1);
 
-    for (index = 0; index <  member.NUMBER_OF_SPOUSES; index++) {
+    for (index = 0; index < member.NUMBER_OF_SPOUSES; index++) {
       parseRelationship(member.ID);
     }
 
-    setField(member, 1, 'TWIN_ID', integer);
-    setField(member, 3);
+    setField(member, 2, 'TWIN_ID', integer);
+    setField(member, 2);
     setField(member, 1, 'DESCRIPTION_1', description);
     setField(member, 1);
     setField(member, 1, 'INDIVIDUAL_FLAGS', integer);
@@ -410,11 +406,15 @@ function FamParser(fileContent) {
     setField(member, 1, 'ANNOTATION_2', annotate);
     setField(member, 180);
     setField(member, 1, 'DESCRIPTION_2', description);
-    setField(member, 24);
+    setField(member, 1);
+    setField(member, 0, 'UNKNOWN_TEXT', identity);
+    setField(member, 22);
 
     flags(member, member['INDIVIDUAL_FLAGS'], 'INDIVIDUAL');
 
     members.push(member);
+
+    return member['ID'];
   }
 
   /*
@@ -440,7 +440,13 @@ function FamParser(fileContent) {
   function parseFooter() {
     var index;
 
-    setField(metadata, 3);
+    setField(metadata, 1, 'NUMBER_OF_UNKNOWN_DATA', integer);
+    setField(metadata, 2);
+
+    for (index = 0; index < metadata.NUMBER_OF_UNKNOWN_DATA; index++) {
+      setField(metadata, 12, 'UNKNOWN_DATA_' + pad(index, 2), raw);
+    }
+
     setField(metadata, 1, 'NUMBER_OF_CUSTOM_DESC', integer);
     setField(metadata, 1);
 
@@ -449,8 +455,8 @@ function FamParser(fileContent) {
     }
 
     for (index = 0; index < metadata.NUMBER_OF_CUSTOM_DESC; index++) {
-     setField(metadata, 0, 'CUSTOM_DESC_' + pad(index, 2), identity);
-     setField(metadata, 0, 'CUSTOM_CHAR_' + pad(index, 2), identity);
+      setField(metadata, 0, 'CUSTOM_DESC_' + pad(index, 2), identity);
+      setField(metadata, 0, 'CUSTOM_CHAR_' + pad(index, 2), identity);
     }
 
     setField(metadata, 14);
@@ -463,19 +469,34 @@ function FamParser(fileContent) {
   }
 
   /*
+  Extract information from the trailer.
+  */
+  function parseTrailer() {
+    setField(metadata, 11, 'EOF_MARKER', identity);
+    setField(metadata, 15);
+  }
+
+  /*
   Parse a FAM file.
   */
   function parse() {
-    var index;
+    var current_id = 0,
+        index;
 
     parseHeader();
-    for (index = 0; index < metadata.SIZE; index++) {
-      parseMember();
+
+    while (current_id !== metadata.LAST_ID) {
+      current_id = parseMember();
     }
 
     parseFooter();
     for (index = 0; index < metadata.NUMBER_OF_TEXT_FIELDS; index++) {
       parseText();
+    }
+
+    parseTrailer();
+    if (metadata.EOF_MARKER !== EOF_MARKER) {
+      throw 'No EOF marker found.';
     }
   }
 
@@ -530,6 +551,5 @@ function FamParser(fileContent) {
 
   parse();
 }
-
 
 module.exports = FamParser;
