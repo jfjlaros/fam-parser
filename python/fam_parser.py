@@ -449,9 +449,10 @@ class FamParser(object):
         self.data = input_handle.read()
 
         self._parse_header()
-        if self.metadata['LAST_ID']:
-            while self._parse_member() != self.metadata['LAST_ID']:
-                pass
+
+        current_id = 0
+        while current_id != self.metadata['LAST_ID']:
+            current_id = self._parse_member()
 
         self._parse_footer()
         for text in range(self.metadata['NUMBER_OF_TEXT_FIELDS']):
