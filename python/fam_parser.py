@@ -248,14 +248,22 @@ class FamParser(object):
         self._set_field(self.metadata, 0, 'AUTHOR')
         self._set_field(self.metadata, 2, 'LAST_ID', _int)
         self._set_field(self.metadata, 2, 'LAST_INTERNAL_ID', _int)
-        self._set_field(self.metadata, 42)
+
+        for i in range(7):
+            self._set_field(self.metadata, 0)
+            self._set_field(self.metadata, 5)
+
         self._set_field(self.metadata, 0, 'COMMENT')
         self._set_field(self.metadata, 3, 'DATE_CREATED', _date)
         self._set_field(self.metadata, 1)
         self._set_field(self.metadata, 3, 'DATE_UPDATED', _date)
-        self._set_field(self.metadata, 14)
+
+        self._set_field(self.metadata, 6)
+        for i in range(7):
+            self._set_field(self.metadata, 0)
+
         self._set_field(self.metadata, 2, 'SELECTED_ID', _int)
-        self._set_field(self.metadata, 16)
+        self._set_field(self.metadata, 17)
 
 
     def _parse_relationship(self, person_id):
@@ -315,11 +323,14 @@ class FamParser(object):
         member = container.Container()
 
         self._set_field(member, 0, 'SURNAME')
-        self._set_field(member, 1)
+        self._set_field(member, 0)
         self._set_field(member, 0, 'FORENAMES')
-        self._set_field(member, 1)
+        self._set_field(member, 0)
         self._set_field(member, 0, 'MAIDEN_NAME')
-        self._set_field(member, 11)
+
+        for i in range(11):
+            self._set_field(member, 0)
+
         self._set_field(member, 0, 'COMMENT', _comment)
         self._set_field(member, 3, 'DATE_OF_BIRTH', _date)
         self._set_field(member, 1)
@@ -342,7 +353,8 @@ class FamParser(object):
             self._parse_relationship(member['ID'])
 
         self._set_field(member, 2, 'TWIN_ID', _int)
-        self._set_field(member, 2)
+        self._set_field(member, 0)
+        self._set_field(member, 1)
         self._set_field(member, 1, 'DESCRIPTION_1', _description)
         self._set_field(member, 1)
         self._set_field(member, 1, 'INDIVIDUAL_FLAGS', _int)
