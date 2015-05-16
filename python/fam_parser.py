@@ -247,7 +247,7 @@ class FamParser(object):
         self._set_field(self.metadata, 0, 'FAMILY_ID')
         self._set_field(self.metadata, 0, 'AUTHOR')
         self._set_field(self.metadata, 2, 'LAST_ID', _int)
-        self._set_field(self.metadata, 2, 'INTERNAL_ID_INCREMENT', _int)
+        self._set_field(self.metadata, 2, 'LAST_INTERNAL_ID', _int)
         self._set_field(self.metadata, 42)
         self._set_field(self.metadata, 0, 'COMMENT')
         self._set_field(self.metadata, 3, 'DATE_CREATED', _date)

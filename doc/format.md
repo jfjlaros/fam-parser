@@ -26,7 +26,7 @@ current ID equals the ID in the header, we are currently parsing the last
 member in the list). IDs seem to be reused when they become available, but it
 is not entirely clear what the underlying rules are.
 
-There is a second ID in the header (`INTERNAL_ID_INCREMENT`) that is also
+There is a second ID in the header (`LAST_INTERNAL_ID`) that is also
 connected to IDs in the members list (`INTERNAL_ID`). This ID seems to be
 incremented only, there seems to be no reusing. At the moment it is not clear
 how these IDs are used or whether they are useful at all. It is also unclear

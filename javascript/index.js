@@ -286,7 +286,7 @@ function FamParser(fileContent) {
     setField(metadata, 0, 'FAMILY_ID');
     setField(metadata, 0, 'AUTHOR');
     setField(metadata, 2, 'LAST_ID', integer);
-    setField(metadata, 2, 'INTERNAL_ID_INCREMENT', integer);
+    setField(metadata, 2, 'LAST_INTERNAL_ID', integer);
     setField(metadata, 42);
     setField(metadata, 0, 'COMMENT');
     setField(metadata, 3, 'DATE_CREATED', date);
