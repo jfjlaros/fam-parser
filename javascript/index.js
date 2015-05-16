@@ -281,20 +281,32 @@ function FamParser(fileContent) {
   Extract header information.
   */
   function parseHeader() {
+    var index;
+
     setField(metadata, 26, 'SOURCE', trim);
     setField(metadata, 0, 'FAMILY_NAME');
     setField(metadata, 0, 'FAMILY_ID');
     setField(metadata, 0, 'AUTHOR');
     setField(metadata, 2, 'LAST_ID', integer);
     setField(metadata, 2, 'LAST_INTERNAL_ID', integer);
-    setField(metadata, 42);
+
+    for (index = 0; index < 7; index++) {
+      setField(metadata, 0);
+      setField(metadata, 5);
+    }
+
     setField(metadata, 0, 'COMMENT');
     setField(metadata, 3, 'DATE_CREATED', date);
     setField(metadata, 1);
     setField(metadata, 3, 'DATE_UPDATED', date);
-    setField(metadata, 14);
+
+    setField(metadata, 6);
+    for (index = 0; index < 7; index++) {
+      setField(metadata, 0);
+    }
+
     setField(metadata, 2, 'SELECTED_ID', integer);
-    setField(metadata, 16);
+    setField(metadata, 17);
   }
 
   /*
@@ -360,11 +372,15 @@ function FamParser(fileContent) {
         index;
 
     setField(member, 0, 'SURNAME');
-    setField(member, 1);
+    setField(member, 0);
     setField(member, 0, 'FORENAMES');
-    setField(member, 1);
+    setField(member, 0);
     setField(member, 0, 'MAIDEN_NAME');
-    setField(member, 11);
+
+    for (index = 0; index < 11; index++) {
+      setField(member, 0);
+    }
+
     setField(member, 0, 'COMMENT', comment);
     setField(member, 3, 'DATE_OF_BIRTH', date);
     setField(member, 1);
@@ -388,7 +404,8 @@ function FamParser(fileContent) {
     }
 
     setField(member, 2, 'TWIN_ID', integer);
-    setField(member, 2);
+    setField(member, 0);
+    setField(member, 1);
     setField(member, 1, 'DESCRIPTION_1', description);
     setField(member, 1);
     setField(member, 1, 'INDIVIDUAL_FLAGS', integer);
@@ -404,7 +421,12 @@ function FamParser(fileContent) {
     parseCrossover(member.ID);
 
     setField(member, 1, 'ANNOTATION_2', annotate);
-    setField(member, 180);
+
+    setField(member, 12);
+    for (index = 0; index < 7; index++) {
+      setField(member, 24);
+    }
+
     setField(member, 1, 'DESCRIPTION_2', description);
     setField(member, 1);
     setField(member, 0, 'UNKNOWN_TEXT', identity);
