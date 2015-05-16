@@ -77,7 +77,16 @@ def _trim(data, delimiter=chr(0x00)):
 
 
 def _raw(data):
-    return data.encode('hex')
+    """
+    Return the input data in hexadecimal, grouped by bit.
+
+    :arg str data: Input data.
+
+    :returns str: Hexadecimal representation of {data}.
+    """
+    raw_data = data.encode('hex')
+
+    return ' '.join([raw_data[x:x + 2] for x in range(0, len(raw_data), 2)])
 
 
 def _bit(data):
