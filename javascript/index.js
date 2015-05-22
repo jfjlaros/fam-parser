@@ -556,6 +556,13 @@ function FamParser(fileContent) {
   };
 
   /*
+  Get metadata object.
+  */
+  this.getMetadata = function() {
+    return metadata;
+  };
+
+  /*
   Get an array of member objects.
   */
   this.getMembers = function() {
@@ -569,6 +576,13 @@ function FamParser(fileContent) {
     return Object.keys(relationships).map(function(key) {
       return relationships[key];
     });
+  };
+
+  /*
+  Get an array of text objects.
+  */
+  this.getTexts = function() {
+    return texts;
   };
 
   parse();
