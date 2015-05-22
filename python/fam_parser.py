@@ -131,7 +131,7 @@ def _date(data):
 
     :arg str data: Binary encoded date.
 
-    :return str: Date in format '%d-%m-%Y', 'DEFINED' or 'UNKNOWN'.
+    :return str: Date in format '%Y%j', 'DEFINED' or 'UNKNOWN'.
     """
     date_int = _int(data)
     if date_int:
