@@ -64,17 +64,46 @@ are not supported it seems.
 ### Trailer
 ### Unknown list
 
-# Data structures
+# Data types
 ## Source
+The first 26 bytes of a FAM file are reserved for the `SOURCE` field. It
+contains the name and version number of the program that created the file.
+Typically it contains a string like: `Pedigree Editor V6.5`. This field is of
+constant size, but the sting inside is delimited by `0x00`. The remaining bits
+are undefined, they sometimes contain parts of the memory (garbage).
+
 ## Flags
+Flags are stored as bit fields of one byte. The following fields are known to
+be flags:
+
+- `INDIVIDUAL` (part of the member data structure).
+- `RELATIONSHIP` (part of the relationship data structure).
+
+## Maps
+Maps are one bit integers that map to one value. The following fields (all part
+of the member data structure) are known to be maps:
+
+- `PROBAND`
+- `SEX`
+- `TWIN_STATUS`
+- `ANNOTATION_1`
+
+The `ANNOTATION_2` field is suspected to be a map, but at this moment we do not
+have sufficient evidence, it could also be a flag.
+
 ## Text fields
-0x0d
+A text field is a byte string delimited by `0x0d`. The encoding is plain ASCII
+as far as we can tell. There is support for fonts and font sizes, perhaps even
+colours, but at this moment we do not know how these attributes are stored.
 
 ### Comments
-0x0903
+The `COMMENT` field (part of the member data structure) is a text field that
+can span multiple lines. The lines are internally separated by `0x0903`.
 
 ### Free text
-0x0b0b
+The `TEXT` field (part of the text data structure) is a text field that can
+span multiple lines, just like the `COMMENT` field. However, in this case the
+lines are internally separated by `0x0b0b`.
 
 ## Integers
 All integers are stored using the little-endian convention. The default size
