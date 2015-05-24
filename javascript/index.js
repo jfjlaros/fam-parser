@@ -488,12 +488,11 @@ function FamParser(fileContent) {
     setField(metadata, 20);
     setField(metadata, 1, 'NUMBER_OF_TEXT_FIELDS', integer);
     setField(metadata, 1);
-  }
 
-  /*
-  Extract information from the trailer.
-  */
-  function parseTrailer() {
+    for (index = 0; index < metadata.NUMBER_OF_TEXT_FIELDS; index++) {
+      parseText();
+    }
+
     setField(metadata, 11, 'EOF_MARKER', identity);
     setField(metadata, 15);
   }
@@ -512,11 +511,7 @@ function FamParser(fileContent) {
     }
 
     parseFooter();
-    for (index = 0; index < metadata.NUMBER_OF_TEXT_FIELDS; index++) {
-      parseText();
-    }
 
-    parseTrailer();
     if (metadata.EOF_MARKER !== EOF_MARKER) {
       throw 'No EOF marker found.';
     }

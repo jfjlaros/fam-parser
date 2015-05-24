@@ -445,11 +445,9 @@ class FamParser(object):
         self._set_field(self.metadata, 1, 'NUMBER_OF_TEXT_FIELDS', _int)
         self._set_field(self.metadata, 1)
 
+        for text in range(self.metadata['NUMBER_OF_TEXT_FIELDS']):
+            self._parse_text()
 
-    def _parse_trailer(self):
-        """
-        Extract information from the trailer.
-        """
         self._set_field(self.metadata, 11, 'EOF_MARKER', _identity)
         self._set_field(self.metadata, 15)
 
@@ -480,10 +478,7 @@ class FamParser(object):
             current_id = self._parse_member()
 
         self._parse_footer()
-        for text in range(self.metadata['NUMBER_OF_TEXT_FIELDS']):
-            self._parse_text()
 
-        self._parse_trailer()
         if self.metadata['EOF_MARKER'] != EOF_MARKER:
             raise Exception('No EOF marker found.')
 
