@@ -37,7 +37,8 @@ A member (an element of the members list) contains a large number of variables
 like name, date of birth, sex, ID, parent IDs, all sorts of flags, coordinates,
 etc. It also contains a list of relationships and a list of crossover events.
 
-Some of the member annotation is configurable, ...
+Some of the member annotation is configurable, see Section **Descriptions** for
+more information.
 
 ### Relationships
 To iterate over the list of relationships, we use the variable
@@ -58,18 +59,51 @@ There is also a flag indicating the zygosity of the twins. Mixed zygosity twins
 are not supported it seems.
 
 ## Footer
+The footer contains metadata such as descriptions, free text fields and zoom
+levels.
+
 ### Descriptions
+There are 23 fixed descriptions. The user can modify the content of these
+descriptions, but they can not be deleted. These fields contain the
+interpretation of the fields `DESCRIPTION_1` and `DESCRIPTION_2` of the member
+data structure. The fields are plain text fields.
+
 ### Custom descriptions
+Apart from the fixed descriptions, custom descriptions can be added (and
+removed). By default no custom descriptions are defined. The number of descriptions is given by the `NUMBER_OF_CUSTOM_DESC` field.
+
+A custom description consists of two parts: the name of the description and the
+custom character(s). Both are plain text fields.
+
+At the moment it is not known how these descriptions are referred to in the
+member data structure.
+
 ### Free text
-### Trailer
+The footer contains a list of free text fields, the number of these fields is
+given in the `NUMBER_OF_TEXT_FIELDS` field.
+
+The text data structure consists of a multi line text field and coordinates. A
+large proportion of this data structure is unknown at this moment, there is
+possibly additional information about fonts, font sizes, etc. in this data
+structure.
+
 ### Unknown list
+The footer contains a list consisting of 12 byte elements. It is currently
+unknown what the function of this list is. The size of this list is given in
+the `NUMBER_OF_UNKNOWN_DATA` field.
+
+### Trailer
+The trailer consists of an end of file marker with value `End of File` followed
+by 15 bytes of `0x00`.
 
 # Data types
+In this section we describe the basic data types.
+
 ## Source
 The first 26 bytes of a FAM file are reserved for the `SOURCE` field. It
 contains the name and version number of the program that created the file.
 Typically it contains a string like: `Pedigree Editor V6.5`. This field is of
-constant size, but the sting inside is delimited by `0x00`. The remaining bits
+constant size, but the sting inside is delimited by `0x00`. The remaining bytes
 are undefined, they sometimes contain parts of the memory (garbage).
 
 ## Flags
@@ -129,4 +163,4 @@ Leap years are taken into account, so the first of March 2012 (a leap year) is
 encoded as `2012061`, while the first of March 2013 is encoded as `2013060`.
 
 # Peculiarities
-`PEDIGREE_NUMBER`
+TODO: `PEDIGREE_NUMBER`
