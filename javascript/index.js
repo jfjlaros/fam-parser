@@ -129,11 +129,11 @@ function bit(data) {
 }
 
 function comment(data) {
-  return data.split(String.fromCharCode(0x09) + String.fromCharCode(0x03));
+  return data.split(String.fromCharCode(0x09) + String.fromCharCode(0x03)).join('\n');
 }
 
 function freetext(data) {
-  return data.split(String.fromCharCode(0x0b) + String.fromCharCode(0x0b));
+  return data.split(String.fromCharCode(0x0b) + String.fromCharCode(0x0b)).join('\n');
 }
 
 function description(data) {

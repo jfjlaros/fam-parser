@@ -94,11 +94,11 @@ def _bit(data):
 
 
 def _comment(data):
-    return data.split(chr(0x09) + chr(0x03))
+    return '\n'.join(data.split(chr(0x09) + chr(0x03)))
 
 
 def _text(data):
-    return data.split(chr(0x0b) + chr(0x0b))
+    return '\n'.join(data.split(chr(0x0b) + chr(0x0b)))
 
 
 def _description(data):
