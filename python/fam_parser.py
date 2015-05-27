@@ -135,7 +135,7 @@ def _date(data):
     """
     date_int = _int(data)
     if date_int:
-        if date_int == 0xFFFFFF:
+        if date_int == 0xFFFFFFFF:
             return 'DEFINED'
         return unicode(date_int)
     return 'UNKNOWN'
@@ -263,11 +263,10 @@ class FamParser(object):
             self._set_field(self.metadata, 5)
 
         self._set_field(self.metadata, 0, 'COMMENT')
-        self._set_field(self.metadata, 3, 'DATE_CREATED', _date)
-        self._set_field(self.metadata, 1)
-        self._set_field(self.metadata, 3, 'DATE_UPDATED', _date)
+        self._set_field(self.metadata, 4, 'DATE_CREATED', _date)
+        self._set_field(self.metadata, 4, 'DATE_UPDATED', _date)
 
-        self._set_field(self.metadata, 6)
+        self._set_field(self.metadata, 5)
         for i in range(7):
             self._set_field(self.metadata, 0)
 
@@ -341,10 +340,8 @@ class FamParser(object):
             self._set_field(member, 0)
 
         self._set_field(member, 0, 'COMMENT', _comment)
-        self._set_field(member, 3, 'DATE_OF_BIRTH', _date)
-        self._set_field(member, 1)
-        self._set_field(member, 3, 'DATE_OF_DEATH', _date)
-        self._set_field(member, 1)
+        self._set_field(member, 4, 'DATE_OF_BIRTH', _date)
+        self._set_field(member, 4, 'DATE_OF_DEATH', _date)
         self._set_field(member, 1, 'SEX', _annotate)
         self._set_field(member, 2, 'ID', _int)
         self._set_field(member, 2, 'PEDIGREE_NUMBER', _int)

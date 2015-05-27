@@ -144,7 +144,7 @@ All integers are stored using the little-endian convention. The default size
 seems to be 16 bits, although for dates (see below) 24 bits are used.
 
 ## Dates
-Dates are encoded in a 24 bits integer, which are stored using the
+Dates are encoded in a 32 bits integer, which are stored using the
 little-endian convention. The encoding is in the date format `%Y%j`: the year
 with century in four decimals followed by the day of the year as a zero-padded
 number in three decimals. For example, the 3rd of May, 2015 is encoded as
@@ -154,10 +154,10 @@ Note that the day of the year is one based, but we have seen it been set to
 zero on occasions. For now, we interpret this as the year being set, but the
 day of the year being unknown.
 
-There are two special values for dates, being `0000000` and `16777215`
-(`0xFFFFFFF`). The first value is interpreted as `UNKNOWN`, the second one as
-`DEFINED`. The `DEFINED` value is used when a person is deceased but the date
-of death is not given.
+There are two special values for dates, being `0x00000000` and `0xFFFFFFFF`.
+The first value is interpreted as `UNKNOWN`, the second one as `DEFINED`. The
+`DEFINED` value is used when a person is deceased but the date of death is not
+given.
 
 Leap years are taken into account, so the first of March 2012 (a leap year) is
 encoded as `2012061`, while the first of March 2013 is encoded as `2013060`.
