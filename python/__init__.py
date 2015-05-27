@@ -12,7 +12,7 @@ from .fam_parser import FamParser, fam_parser
 
 
 __version_info__ = ('0', '0', '2')
-__date__ = '9 Mar 2015'
+__date__ = '27 May 2015'
 
 
 __version__ = '.'.join(__version_info__)
