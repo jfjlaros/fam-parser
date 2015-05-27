@@ -30,15 +30,21 @@ MAPS = {
         0x01: 'FEMALE',
         0x02: 'UNKNOWN'
     },
-    'TWIN_STATUS': {
-        0x00: 'NONE',
-        0x01: 'MONOZYGOUS',
-        0x02: 'DIZYGOUS',
-        0x03: 'UNKNOWN',
+    'MULTIPLE_PREGNANCIES': {
+        0x00: 'SINGLETON',
+        0x01: 'MONOZYGOTIC_TWINS',
+        0x02: 'DIZYGOTIC_TWINS',
+        0x03: 'TWIN_TYPE_UNKNOWN',
         0x04: 'TRIPLET',
         0x05: 'QUADRUPLET',
         0x06: 'QUINTUPLET',
         0x07: 'SEXTUPLET'
+    },
+    'ADOPTION_TYPE': {
+        0x00: 'ADOPTED_INTO_FAMILY',
+        0x01: 'NOT_ADOPTED',
+        0x02: 'POSSIBLY_ADOPTED_INTO_FAMILY',
+        0x03: 'ADOPTED_OUT_OF_FAMILY'
     },
     'ANNOTATION_1': {
         0x00: 'NONE',
@@ -50,20 +56,27 @@ MAPS = {
     },
     'ANNOTATION_2': {
         0x00: 'NONE',
-        0x01: 'AFFECTED',
+        0x01: 'AFFECTED'
     }
 }
 
 FLAGS = {
     'INDIVIDUAL': {
+        0x01: 'BLOOD',
+        0x02: 'DNA',
         0x04: 'LOOP_BREAKPOINT',
         0x08: 'HIDE_INFO',
+        0x10: 'COMMITTED_SUICIDE',
+        0x20: 'CELLS'
     },
     'RELATIONSHIP': {
         0x01: 'INFORMAL',
         0x02: 'CONSANGUINEOUS',
         0x04: 'SEPARATED',
         0x08: 'DIVORCED'
+    },
+    'SAMPLE': {
+        0x01: 'SAMPLE_REQUIRED'
     }
 }
 
@@ -259,8 +272,11 @@ class FamParser(object):
         self._set_field(self.metadata, 2, 'LAST_INTERNAL_ID', _int)
 
         for i in range(7):
-            self._set_field(self.metadata, 0)
-            self._set_field(self.metadata, 5)
+            self._set_field(self.metadata, 0,
+                'FAMILY_DISEASE_LOCUS_{:02d}'.format(i))
+            self._set_field(self.metadata, 3,
+                'FAMILY_DISEASE_LOCUS_COLOUR_{:02d}'.format(i), _raw)
+            self._set_field(self.metadata, 2)
 
         self._set_field(self.metadata, 0, 'COMMENT')
         self._set_field(self.metadata, 4, 'DATE_CREATED', _date)
@@ -268,7 +284,8 @@ class FamParser(object):
 
         self._set_field(self.metadata, 5)
         for i in range(7):
-            self._set_field(self.metadata, 0)
+            self._set_field(self.metadata, 0,
+                'QUANTITATIVE_VALUE_LOCUS_NAME_{:02d}'.format(i))
 
         self._set_field(self.metadata, 2, 'SELECTED_ID', _int)
         self._set_field(self.metadata, 17)
@@ -284,10 +301,11 @@ class FamParser(object):
 
         relationship['MEMBER_1_ID'] = person_id
         self._set_field(relationship, 2, 'MEMBER_2_ID', _int)
-        self._set_field(relationship, 1, 'RELATION_FLAGS', _int)
-        self._set_field(relationship, 0, 'RELATION_NAME')
 
+        self._set_field(relationship, 1, 'RELATION_FLAGS', _int)
         _flags(relationship, relationship['RELATION_FLAGS'], 'RELATIONSHIP')
+
+        self._set_field(relationship, 0, 'RELATION_NAME')
 
         key = tuple(sorted((person_id, relationship['MEMBER_2_ID'])))
         if not self.relationships[key]:
@@ -331,15 +349,22 @@ class FamParser(object):
         member = container.Container()
 
         self._set_field(member, 0, 'SURNAME')
-        self._set_field(member, 0)
+        self._set_field(member, 0, 'OTHER_SURNAMES')
         self._set_field(member, 0, 'FORENAMES')
-        self._set_field(member, 0)
+        self._set_field(member, 0, 'KNOWN_AS')
         self._set_field(member, 0, 'MAIDEN_NAME')
-
-        for i in range(11):
-            self._set_field(member, 0)
-
-        self._set_field(member, 0, 'COMMENT', _comment)
+        self._set_field(member, 0, 'ETHNICITY_SELF')
+        self._set_field(member, 0, 'ETHNICITY_M_G_MOTHER')
+        self._set_field(member, 0, 'ETHNICITY_M_G_FATHER')
+        self._set_field(member, 0, 'ETHNICITY_P_G_MOTHER')
+        self._set_field(member, 0, 'ETHNICITY_P_G_FATHER')
+        self._set_field(member, 0, 'ORIGINS_SELF')
+        self._set_field(member, 0, 'ORIGINS_M_G_MOTHER')
+        self._set_field(member, 0, 'ORIGINS_M_G_FATHER')
+        self._set_field(member, 0, 'ORIGINS_P_G_MOTHER')
+        self._set_field(member, 0, 'ORIGINS_P_G_FATHER')
+        self._set_field(member, 0, 'ADDRESS')
+        self._set_field(member, 0, 'ADDITIONAL_INFORMATION', _comment)
         self._set_field(member, 4, 'DATE_OF_BIRTH', _date)
         self._set_field(member, 4, 'DATE_OF_DEATH', _date)
         self._set_field(member, 1, 'SEX', _annotate)
@@ -359,18 +384,21 @@ class FamParser(object):
             self._parse_relationship(member['ID'])
 
         self._set_field(member, 2, 'TWIN_ID', _int)
-        self._set_field(member, 0)
-        self._set_field(member, 1)
+        self._set_field(member, 0, 'COMMENT')
+        self._set_field(member, 1, 'ADOPTION_TYPE', _annotate)
         self._set_field(member, 1, 'DESCRIPTION_1', _description)
         self._set_field(member, 1)
+
         self._set_field(member, 1, 'INDIVIDUAL_FLAGS', _int)
+        _flags(member, member['INDIVIDUAL_FLAGS'], 'INDIVIDUAL')
+
         self._set_field(member, 1, 'PROBAND', _annotate)
         self._set_field(member, 1, 'X_COORDINATE', _int)
         self._set_field(member, 1)
         self._set_field(member, 1, 'Y_COORDINATE', _int)
         self._set_field(member, 1)
         self._set_field(member, 1, 'ANNOTATION_1', _annotate)
-        self._set_field(member, 1, 'TWIN_STATUS', _annotate)
+        self._set_field(member, 1, 'MULTIPLE_PREGNANCIES', _annotate)
         self._set_field(member, 3)
 
         self._parse_crossover(member['ID'])
@@ -382,11 +410,23 @@ class FamParser(object):
             self._set_field(member, 24)
 
         self._set_field(member, 1, 'DESCRIPTION_2', _description)
-        self._set_field(member, 1)
-        self._set_field(member, 0, 'UNKNOWN_TEXT', _identity)
+
+        # NOTE: DNA and BLOOD fields are switched in Cyrillic. i.e., if DNA is
+        # selected, the BLOOD_LOCATION field is stored and if BLOOD is
+        # selected, the DNA_LOCATION field is stored. This is probably a bug.
+        if member['DNA']:
+            self._set_field(member, 0, 'DNA_LOCATION')
+        if member['BLOOD']:
+            self._set_field(member, 0, 'BLOOD_LOCATION')
+        if member['CELLS']:
+            self._set_field(member, 0, 'CELLS_LOCATION')
+
+        self._set_field(member, 1, 'SAMPLE_FLAGS', _int)
+        _flags(member, member['SAMPLE_FLAGS'], 'SAMPLE')
+
+        self._set_field(member, 0, 'SAMPLE_NUMBER')
         self._set_field(member, 22)
 
-        _flags(member, member['INDIVIDUAL_FLAGS'], 'INDIVIDUAL')
 
         self.members.append(member)
 
@@ -426,13 +466,13 @@ class FamParser(object):
 
         for description in range(23):
             self._set_field(self.metadata, 0,
-                '{}{:02d}'.format(DESC_PREFIX, description), _identity)
+                '{}{:02d}'.format(DESC_PREFIX, description))
 
         for description in range(self.metadata['NUMBER_OF_CUSTOM_DESC']):
             self._set_field(self.metadata, 0,
-                'CUSTOM_DESC_{:02d}'.format(description), _identity)
+                'CUSTOM_DESC_{:02d}'.format(description))
             self._set_field(self.metadata, 0,
-                'CUSTOM_CHAR_{:02d}'.format(description), _identity)
+                'CUSTOM_CHAR_{:02d}'.format(description))
 
         self._set_field(self.metadata, 14)
         self._set_field(self.metadata, 2, 'ZOOM', _int)
@@ -445,7 +485,7 @@ class FamParser(object):
         for text in range(self.metadata['NUMBER_OF_TEXT_FIELDS']):
             self._parse_text()
 
-        self._set_field(self.metadata, 11, 'EOF_MARKER', _identity)
+        self._set_field(self.metadata, 11, 'EOF_MARKER')
         self._set_field(self.metadata, 15)
 
 
