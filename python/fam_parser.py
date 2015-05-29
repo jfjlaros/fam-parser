@@ -57,6 +57,15 @@ MAPS = {
     'ANNOTATION_2': {
         0x00: 'NONE',
         0x01: 'AFFECTED'
+    },
+    'PATTERN': {
+        0x00: 'HORIZONTAL',
+        0x01: 'VERTICAL',
+        0x02: 'SLANTED_BACK',
+        0x03: 'SLANTED_FORWARD',
+        0x04: 'GRID',
+        0x05: 'DIAGONAL_GRID',
+        0xff: 'FILL'
     }
 }
 
@@ -266,8 +275,8 @@ class FamParser(object):
         """
         self._set_field(self.metadata, 26, 'SOURCE', _trim)
         self._set_field(self.metadata, 0, 'FAMILY_NAME')
-        self._set_field(self.metadata, 0, 'FAMILY_ID')
-        self._set_field(self.metadata, 0, 'AUTHOR')
+        self._set_field(self.metadata, 0, 'FAMILY_ID_NUMBER')
+        self._set_field(self.metadata, 0, 'FAMILY_DRAWN_BY')
         self._set_field(self.metadata, 2, 'LAST_ID', _int)
         self._set_field(self.metadata, 2, 'LAST_INTERNAL_ID', _int)
 
@@ -276,11 +285,13 @@ class FamParser(object):
                 'FAMILY_DISEASE_LOCUS_{:02d}'.format(i))
             self._set_field(self.metadata, 3,
                 'FAMILY_DISEASE_LOCUS_COLOUR_{:02d}'.format(i), _raw)
-            self._set_field(self.metadata, 2)
+            self._set_field(self.metadata, 1)
+            self._set_field(self.metadata, 1, # Needs annotation with PATTERN.
+                'FAMILY_DISEASE_LOCUS_PATTERN_{:02d}'.format(i), _raw)
 
-        self._set_field(self.metadata, 0, 'COMMENT')
-        self._set_field(self.metadata, 4, 'DATE_CREATED', _date)
-        self._set_field(self.metadata, 4, 'DATE_UPDATED', _date)
+        self._set_field(self.metadata, 0, 'COMMENTS')
+        self._set_field(self.metadata, 4, 'CREATION_DATE', _date)
+        self._set_field(self.metadata, 4, 'LAST_UPDATED', _date)
 
         self._set_field(self.metadata, 5)
         for i in range(7):
@@ -288,7 +299,12 @@ class FamParser(object):
                 'QUANTITATIVE_VALUE_LOCUS_NAME_{:02d}'.format(i))
 
         self._set_field(self.metadata, 2, 'SELECTED_ID', _int)
-        self._set_field(self.metadata, 17)
+
+        # There is some ``marker'' information here.
+        self._set_field(self.metadata, 7)
+        #self._set_field(self.metadata, 440, 'DEBUG', _raw)
+        #self._set_field(self.metadata, 440, 'DEBUG2', _raw)
+        self._set_field(self.metadata, 10)
 
 
     def _parse_relationship(self, person_id):
@@ -386,7 +402,7 @@ class FamParser(object):
         self._set_field(member, 2, 'TWIN_ID', _int)
         self._set_field(member, 0, 'COMMENT')
         self._set_field(member, 1, 'ADOPTION_TYPE', _annotate)
-        self._set_field(member, 1, 'DESCRIPTION_1', _description)
+        self._set_field(member, 1, 'GENETIC_SYMBOLS', _description)
         self._set_field(member, 1)
 
         self._set_field(member, 1, 'INDIVIDUAL_FLAGS', _int)
@@ -409,7 +425,7 @@ class FamParser(object):
         for i in range(7):
             self._set_field(member, 24)
 
-        self._set_field(member, 1, 'DESCRIPTION_2', _description)
+        self._set_field(member, 1, 'ADDITIONAL_SYMBOLS', _description)
 
         # NOTE: DNA and BLOOD fields are switched in Cyrillic. i.e., if DNA is
         # selected, the BLOOD_LOCATION field is stored and if BLOOD is
@@ -425,7 +441,9 @@ class FamParser(object):
         _flags(member, member['SAMPLE_FLAGS'], 'SAMPLE')
 
         self._set_field(member, 0, 'SAMPLE_NUMBER')
-        self._set_field(member, 22)
+        self._set_field(member, 3) # COLOUR
+        self._set_field(member, 17)
+        self._set_field(member, 2) # PATTERN
 
 
         self.members.append(member)
