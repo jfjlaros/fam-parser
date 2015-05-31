@@ -225,6 +225,7 @@ class FamParser(object):
         self.data = ''
         self.offset = 0
         self.metadata = container.Container()
+        self.markers = []
         self.members = []
         self.relationships = container.Container()
         self.text = []
@@ -232,6 +233,20 @@ class FamParser(object):
         self.debug = debug
         self.experimental = experimental
         self.extracted = 0
+
+
+    def _get_field(self, size, delimiter=chr(0x0d)):
+        """
+        """
+        if size:
+            field = self.data[self.offset:self.offset + size]
+            extracted = size
+        else:
+            field = self.data[self.offset:].split(delimiter)[0]
+            extracted = len(field) + 1
+
+        self.offset += extracted
+        return field
 
 
     def _set_field(self, destination, size, name='', function=_identity,
@@ -269,42 +284,62 @@ class FamParser(object):
         self.offset += extracted
 
 
+    def _parse_markers(self):
+        """
+        """
+        marker = container.Container()
+        markers = 0
+
+        while True:
+            flag = 'FLAG_{:02d}'.format(markers)
+
+            marker[flag] = _raw(self._get_field(1))
+            if marker[flag] == '01':
+                break
+
+            marker['MARKER_{:02d}'.format(markers)] = self._get_field(439)
+            self.markers.append(marker)
+            markers += 1
+
+
     def _parse_header(self):
         """
         Extract header information.
         """
-        self._set_field(self.metadata, 26, 'SOURCE', _trim)
-        self._set_field(self.metadata, 0, 'FAMILY_NAME')
-        self._set_field(self.metadata, 0, 'FAMILY_ID_NUMBER')
-        self._set_field(self.metadata, 0, 'FAMILY_DRAWN_BY')
-        self._set_field(self.metadata, 2, 'LAST_ID', _int)
-        self._set_field(self.metadata, 2, 'LAST_INTERNAL_ID', _int)
+        self.metadata['SOURCE'] = _trim(self._get_field(26))
+        self.metadata['FAMILY_NAME'] = self._get_field(0)
+        self.metadata['FAMILY_ID_NUMBER'] = self._get_field(0)
+        self.metadata['FAMILY_DRAWN_BY'] = self._get_field(0)
+        self.metadata['LAST_ID'] = _int(self._get_field(2))
+        self.metadata['LAST_INTERNAL_ID'] = _int(self._get_field(2))
 
         for i in range(7):
-            self._set_field(self.metadata, 0,
-                'FAMILY_DISEASE_LOCUS_{:02d}'.format(i))
-            self._set_field(self.metadata, 3,
-                'FAMILY_DISEASE_LOCUS_COLOUR_{:02d}'.format(i), _raw)
-            self._set_field(self.metadata, 1)
-            self._set_field(self.metadata, 1, # Needs annotation with PATTERN.
-                'FAMILY_DISEASE_LOCUS_PATTERN_{:02d}'.format(i), _raw)
+            self.metadata['FAMILY_DISEASE_LOCUS_{:02d}'.format(i)] = \
+                self._get_field(0)
+            self.metadata['FAMILY_DISEASE_LOCUS_COLOUR_{:02d}'.format(i)] = \
+                _raw(self._get_field(3))
+            self._get_field(1)
+            self.metadata['FAMILY_DISEASE_LOCUS_PATTERN_{:02d}'.format(i)] = \
+                _raw(self._get_field(1))
 
-        self._set_field(self.metadata, 0, 'COMMENTS')
-        self._set_field(self.metadata, 4, 'CREATION_DATE', _date)
-        self._set_field(self.metadata, 4, 'LAST_UPDATED', _date)
+        self.metadata['COMMENTS'] = self._get_field(0)
+        self.metadata['CREATION_DATE'] = _date(self._get_field(4))
+        self.metadata['LAST_UPDATED'] = _date(self._get_field(4))
 
-        self._set_field(self.metadata, 5)
+        self._get_field(5)
         for i in range(7):
-            self._set_field(self.metadata, 0,
-                'QUANTITATIVE_VALUE_LOCUS_NAME_{:02d}'.format(i))
+            self.metadata['QUANTITATIVE_VALUE_LOCUS_NAME_{:02d}'.format(i)] = \
+                self._get_field(0)
 
-        self._set_field(self.metadata, 2, 'SELECTED_ID', _int)
+        self.metadata['SELECTED_ID'] = _int(self._get_field(2))
 
         # There is some ``marker'' information here.
-        self._set_field(self.metadata, 7)
-        #self._set_field(self.metadata, 440, 'DEBUG', _raw)
-        #self._set_field(self.metadata, 440, 'DEBUG2', _raw)
-        self._set_field(self.metadata, 10)
+        self.metadata['DEBUG1'] = _raw(self._get_field(7))
+        self._parse_markers()
+        #self.metadata['MARKER_END'] = _int(self._get_field(1))
+        #self.metadata['DEBUG'] = _raw(self._get_field(440))
+        #self.metadata['DEBUG2'] = _raw(self._get_field(440))
+        self._get_field(9)
 
 
     def _parse_relationship(self, person_id):
@@ -316,12 +351,12 @@ class FamParser(object):
         relationship = container.Container()
 
         relationship['MEMBER_1_ID'] = person_id
-        self._set_field(relationship, 2, 'MEMBER_2_ID', _int)
+        relationship['MEMBER_2_ID'] = _int(self._get_field(2))
 
-        self._set_field(relationship, 1, 'RELATION_FLAGS', _int)
+        relationship['RELATION_FLAGS'] = _int(self._get_field(1))
         _flags(relationship, relationship['RELATION_FLAGS'], 'RELATIONSHIP')
 
-        self._set_field(relationship, 0, 'RELATION_NAME')
+        relationship['RELATION_NAME'] = self._get_field(0)
 
         key = tuple(sorted((person_id, relationship['MEMBER_2_ID'])))
         if not self.relationships[key]:
@@ -342,17 +377,17 @@ class FamParser(object):
         while alleles < 2:
             flag = 'FLAG_{:02d}'.format(events)
 
-            self._set_field(crossover, 1, flag, _raw)
+            crossover[flag] = _raw(self._get_field(1))
             if crossover[flag] == '22':
-                self._set_field(crossover, 9,
-                    'ALLELE_{:02d}'.format(alleles), _raw)
+                crossover['ALLELE_{:02d}'.format(alleles)] = _raw(
+                    self._get_field(9))
                 if not alleles:
-                    self._set_field(crossover, 2,
-                        'SPACER_{:02d}'.format(alleles), _raw)
+                    crossover['SPACER_{:02d}'.format(alleles)] = _raw(
+                        self._get_field(2))
                 alleles += 1
             else:
-                self._set_field(crossover, 11,
-                    'CROSSOVER_{:02d}'.format(events), _raw)
+                crossover['CROSSOVER_{:02d}'.format(events)] = _raw(
+                    self._get_field(11))
             events += 1
 
         self.crossovers.append(crossover)
@@ -364,86 +399,88 @@ class FamParser(object):
         """
         member = container.Container()
 
-        self._set_field(member, 0, 'SURNAME')
-        self._set_field(member, 0, 'OTHER_SURNAMES')
-        self._set_field(member, 0, 'FORENAMES')
-        self._set_field(member, 0, 'KNOWN_AS')
-        self._set_field(member, 0, 'MAIDEN_NAME')
-        self._set_field(member, 0, 'ETHNICITY_SELF')
-        self._set_field(member, 0, 'ETHNICITY_M_G_MOTHER')
-        self._set_field(member, 0, 'ETHNICITY_M_G_FATHER')
-        self._set_field(member, 0, 'ETHNICITY_P_G_MOTHER')
-        self._set_field(member, 0, 'ETHNICITY_P_G_FATHER')
-        self._set_field(member, 0, 'ORIGINS_SELF')
-        self._set_field(member, 0, 'ORIGINS_M_G_MOTHER')
-        self._set_field(member, 0, 'ORIGINS_M_G_FATHER')
-        self._set_field(member, 0, 'ORIGINS_P_G_MOTHER')
-        self._set_field(member, 0, 'ORIGINS_P_G_FATHER')
-        self._set_field(member, 0, 'ADDRESS')
-        self._set_field(member, 0, 'ADDITIONAL_INFORMATION', _comment)
-        self._set_field(member, 4, 'DATE_OF_BIRTH', _date)
-        self._set_field(member, 4, 'DATE_OF_DEATH', _date)
-        self._set_field(member, 1, 'SEX', _annotate)
-        self._set_field(member, 2, 'ID', _int)
-        self._set_field(member, 2, 'PEDIGREE_NUMBER', _int)
-        self._set_field(member, 2, 'MOTHER_ID', _int)
-        self._set_field(member, 2, 'FATHER_ID', _int)
-        self._set_field(member, 2, 'INTERNAL_ID', _int)
-        self._set_field(member, 1, 'NUMBER_OF_INDIVIDUALS', _int)
-        self._set_field(member, 1)
-        self._set_field(member, 0, 'AGE_GESTATION')
-        self._set_field(member, 0, 'INDIVIDUAL_ID')
-        self._set_field(member, 1, 'NUMBER_OF_SPOUSES', _int)
-        self._set_field(member, 1)
+        member['SURNAME'] = _raw(self._get_field(0))
+        member['OTHER_SURNAMES'] = self._get_field(0)
+        member['FORENAMES'] = self._get_field(0)
+        member['KNOWN_AS'] = self._get_field(0)
+        member['MAIDEN_NAME'] = self._get_field(0)
+        member['ETHNICITY_SELF'] = self._get_field(0)
+        member['ETHNICITY_M_G_MOTHER'] = self._get_field(0)
+        member['ETHNICITY_M_G_FATHER'] = self._get_field(0)
+        member['ETHNICITY_P_G_MOTHER'] = self._get_field(0)
+        member['ETHNICITY_P_G_FATHER'] = self._get_field(0)
+        member['ORIGINS_SELF'] = self._get_field(0)
+        member['ORIGINS_M_G_MOTHER'] = self._get_field(0)
+        member['ORIGINS_M_G_FATHER'] = self._get_field(0)
+        member['ORIGINS_P_G_MOTHER'] = self._get_field(0)
+        member['ORIGINS_P_G_FATHER'] = self._get_field(0)
+        member['ADDRESS'] = self._get_field(0)
+        member['ADDITIONAL_INFORMATION'] = _comment(self._get_field(0))
+        member['DATE_OF_BIRTH'] = _date(self._get_field(4))
+        member['DATE_OF_DEATH'] = _date(self._get_field(4))
+        member['SEX'] = _annotate(self._get_field(1), 'SEX')
+        member['ID'] = _int(self._get_field(2))
+        member['PEDIGREE_NUMBER'] = _int(self._get_field(2))
+        member['MOTHER_ID'] = _int(self._get_field(2))
+        member['FATHER_ID'] = _int(self._get_field(2))
+        member['INTERNAL_ID'] = _int(self._get_field(2))
+        member['NUMBER_OF_INDIVIDUALS'] = _int(self._get_field(1))
+        self._get_field(1)
+        member['AGE_GESTATION'] = self._get_field(0)
+        member['INDIVIDUAL_ID'] = self._get_field(0)
+        member['NUMBER_OF_SPOUSES'] = _int(self._get_field(1))
+        self._get_field(1)
 
         for spouse in range(member['NUMBER_OF_SPOUSES']):
             self._parse_relationship(member['ID'])
 
-        self._set_field(member, 2, 'TWIN_ID', _int)
-        self._set_field(member, 0, 'COMMENT')
-        self._set_field(member, 1, 'ADOPTION_TYPE', _annotate)
-        self._set_field(member, 1, 'GENETIC_SYMBOLS', _description)
-        self._set_field(member, 1)
+        member['TWIN_ID'] = _int(self._get_field(2))
+        member['COMMENT'] = self._get_field(0)
+        member['ADOPTION_TYPE'] = _annotate(self._get_field(1),
+            'ADOPTION_TYPE')
+        member['GENETIC_SYMBOLS'] = _description(self._get_field(1))
+        self._get_field(1)
 
-        self._set_field(member, 1, 'INDIVIDUAL_FLAGS', _int)
+        member['INDIVIDUAL_FLAGS'] = _int(self._get_field(1))
         _flags(member, member['INDIVIDUAL_FLAGS'], 'INDIVIDUAL')
 
-        self._set_field(member, 1, 'PROBAND', _annotate)
-        self._set_field(member, 1, 'X_COORDINATE', _int)
-        self._set_field(member, 1)
-        self._set_field(member, 1, 'Y_COORDINATE', _int)
-        self._set_field(member, 1)
-        self._set_field(member, 1, 'ANNOTATION_1', _annotate)
-        self._set_field(member, 1, 'MULTIPLE_PREGNANCIES', _annotate)
-        self._set_field(member, 3)
+        member['PROBAND'] = _annotate(self._get_field(1), 'PROBAND')
+        member['X_COORDINATE'] = _int(self._get_field(1))
+        self._get_field(1)
+        member['Y_COORDINATE'] = _int(self._get_field(1))
+        self._get_field(1)
+        member['ANNOTATION_1'] = _annotate(self._get_field(1), 'ANNOTATION_1')
+        member['MULTIPLE_PREGNANCIES'] = _annotate(self._get_field(1),
+            'MULTIPLE_PREGNANCIES')
+        self._get_field(3)
 
         self._parse_crossover(member['ID'])
 
-        self._set_field(member, 1, 'ANNOTATION_2', _annotate)
+        member['ANNOTATION_2'] = _annotate(self._get_field(1), 'ANNOTATION_2')
 
-        self._set_field(member, 12)
+        self._get_field(12)
         for i in range(7):
-            self._set_field(member, 24)
+            self._get_field(24)
 
-        self._set_field(member, 1, 'ADDITIONAL_SYMBOLS', _description)
+        member['ADDITIONAL_SYMBOLS'] = _description(self._get_field(1))
 
         # NOTE: DNA and BLOOD fields are switched in Cyrillic. i.e., if DNA is
         # selected, the BLOOD_LOCATION field is stored and if BLOOD is
         # selected, the DNA_LOCATION field is stored. This is probably a bug.
         if member['DNA']:
-            self._set_field(member, 0, 'DNA_LOCATION')
+            member['DNA_LOCATION'] = self._get_field(0)
         if member['BLOOD']:
-            self._set_field(member, 0, 'BLOOD_LOCATION')
+            member['BLOOD_LOCATION'] = self._get_field(0)
         if member['CELLS']:
-            self._set_field(member, 0, 'CELLS_LOCATION')
+            member['CELLS_LOCATION'] = self._get_field(0)
 
-        self._set_field(member, 1, 'SAMPLE_FLAGS', _int)
+        member['SAMPLE_FLAGS'] = _int(self._get_field(1))
         _flags(member, member['SAMPLE_FLAGS'], 'SAMPLE')
 
-        self._set_field(member, 0, 'SAMPLE_NUMBER')
-        self._set_field(member, 3) # COLOUR
-        self._set_field(member, 17)
-        self._set_field(member, 2) # PATTERN
+        member['SAMPLE_NUMBER'] = self._get_field(0)
+        self._get_field(3) # COLOUR
+        self._get_field(17)
+        self._get_field(2) # PATTERN
 
 
         self.members.append(member)
@@ -458,12 +495,12 @@ class FamParser(object):
         # TODO: X and Y coordinates have more digits.
         text = container.Container()
 
-        self._set_field(text, 0, 'TEXT', _text)
-        self._set_field(text, 54)
-        self._set_field(text, 1, 'X_COORDINATE', _int)
-        self._set_field(text, 3)
-        self._set_field(text, 1, 'Y_COORDINATE', _int)
-        self._set_field(text, 7)
+        text['TEXT'] = _text(self._get_field(0))
+        self._get_field(54)
+        text['X_COORDINATE'] = _int(self._get_field(1))
+        self._get_field(3)
+        text['Y_COORDINATE'] = _int(self._get_field(1))
+        self._get_field(7)
 
         self.text.append(text)
 
@@ -472,39 +509,39 @@ class FamParser(object):
         """
         Extract information from the footer.
         """
-        self._set_field(self.metadata, 1, 'NUMBER_OF_UNKNOWN_DATA', _int)
-        self._set_field(self.metadata, 2)
+        self.metadata['NUMBER_OF_UNKNOWN_DATA'] = _int(self._get_field(1))
+        self._get_field(2)
 
         for number in range(self.metadata['NUMBER_OF_UNKNOWN_DATA']):
-            self._set_field(self.metadata, 12,
-                '{}{:02d}'.format('UNKNOWN_DATA_', number), _raw)
+            self.metadata['{}{:02d}'.format('UNKNOWN_DATA_', number)] = \
+                _raw(self._get_field(12))
 
-        self._set_field(self.metadata, 1, 'NUMBER_OF_CUSTOM_DESC', _int)
-        self._set_field(self.metadata, 1)
+        self.metadata['NUMBER_OF_CUSTOM_DESC'] = _int(self._get_field(1))
+        self._get_field(1)
 
         for description in range(23):
-            self._set_field(self.metadata, 0,
-                '{}{:02d}'.format(DESC_PREFIX, description))
+            self.metadata['{}{:02d}'.format(DESC_PREFIX, description)] = \
+                self._get_field(0)
 
         for description in range(self.metadata['NUMBER_OF_CUSTOM_DESC']):
-            self._set_field(self.metadata, 0,
-                'CUSTOM_DESC_{:02d}'.format(description))
-            self._set_field(self.metadata, 0,
-                'CUSTOM_CHAR_{:02d}'.format(description))
+            self.metadata['CUSTOM_DESC_{:02d}'.format(description)] = \
+                self._get_field(0)
+            self.metadata['CUSTOM_CHAR_{:02d}'.format(description)] = \
+                self._get_field(0)
 
-        self._set_field(self.metadata, 14)
-        self._set_field(self.metadata, 2, 'ZOOM', _int)
-        self._set_field(self.metadata, 4, 'UNKNOWN_1', _raw) # Zoom.
-        self._set_field(self.metadata, 4, 'UNKNOWN_2', _raw) # Zoom.
-        self._set_field(self.metadata, 20)
-        self._set_field(self.metadata, 1, 'NUMBER_OF_TEXT_FIELDS', _int)
-        self._set_field(self.metadata, 1)
+        self._get_field(14)
+        self.metadata['ZOOM'] = _int(self._get_field(2))
+        self.metadata['UNKNOWN_1'] = _raw(self._get_field(4)) # Zoom.
+        self.metadata['UNKNOWN_2'] = _raw(self._get_field(4)) # Zoom.
+        self._get_field(20)
+        self.metadata['NUMBER_OF_TEXT_FIELDS'] = _int(self._get_field(1))
+        self._get_field(1)
 
         for text in range(self.metadata['NUMBER_OF_TEXT_FIELDS']):
             self._parse_text()
 
-        self._set_field(self.metadata, 11, 'EOF_MARKER')
-        self._set_field(self.metadata, 15)
+        self.metadata['EOF_MARKER'] = self._get_field(11)
+        self._get_field(15)
 
 
     def _write_dictionary(self, dictionary, output_handle):
@@ -559,6 +596,9 @@ class FamParser(object):
             for crossover in self.crossovers:
                 output_handle.write('\n\n--- CROSSOVER ---\n\n')
                 self._write_dictionary(crossover, output_handle)
+            for marker in self.markers:
+                output_handle.write('\n\n--- MARKER ---\n\n')
+                self._write_dictionary(marker, output_handle)
 
         for text in self.text:
             output_handle.write('\n\n--- TEXT ---\n\n')
