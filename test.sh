@@ -4,7 +4,7 @@ TEMP_FILE="/tmp/.test_$RANDOM"
 
 echo -n "Testing Python interface "
 for i in data/*.fam data/*.FAM; do
-  python -m python.fam_parser -e -d $i $TEMP_FILE > /dev/null
+  python -m python.fam_parser -d $i $TEMP_FILE > /dev/null
   
   if ! grep "^EOF_MARKER: End of File$" $TEMP_FILE > /dev/null; then
     echo

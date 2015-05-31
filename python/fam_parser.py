@@ -10,10 +10,7 @@ import argparse
 import json
 import sys
 
-from . import container
 
-
-DESC_PREFIX = 'DESC_'
 EOF_MARKER = 'End of File'
 
 MAPS = {
@@ -128,10 +125,9 @@ def _raw(data):
 
     :arg str data: Input data.
 
-    :returns str: Hexadecimal representation of {data}.
+    :return str: Hexadecimal representation of {data}.
     """
     raw_data = data.encode('hex')
-
     return ' '.join([raw_data[x:x + 2] for x in range(0, len(raw_data), 2)])
 
 
@@ -149,10 +145,6 @@ def _info(data):
 
 def _text(data):
     return '\n'.join(data.split(chr(0x0b) + chr(0x0b)))
-
-
-def _description(data):
-    return '{}{:02d}'.format(DESC_PREFIX, ord(data))
 
 
 def _int(data):
@@ -211,22 +203,27 @@ def _annotate(data, annotation):
     return '{:02x}'.format(index)
 
 
-def _flags(destination, bitfield, annotation):
+def _flags(data, annotation):
     """
     Explode a bitfield into flags.
 
-    :arg dict destination: Destination dictionary.
-    :arg int bitfield: Bit field.
-    :arg str annotation: Annotation of {bitfield}.
+    :arg int data: Bit field.
+    :arg str annotation: Annotation of {data}.
+
+    :return dict: Dictionary of flags and their values.
     """
+    destination = {}
+
     for flag in map(lambda x: 2 ** x, range(8)):
-        value = bool(flag & bitfield)
+        value = bool(flag & data)
 
         if flag not in FLAGS[annotation]:
             if value:
                 destination['FLAGS_{}_{:02x}'.format(annotation, flag)] = value
         else:
             destination[FLAGS[annotation][flag]] = value
+
+    return destination
 
 
 def _block_write(string, block_size, stream=sys.stdout):
@@ -247,36 +244,14 @@ class FamParser(object):
     """
     FAM file parsing.
     """
-    def __init__(self, experimental=False, debug=False, log=sys.stdout):
+    def __init__(self, debug=False, log=sys.stdout):
         """
         Constructor.
 
-        :arg bool experimental: Enable experimental features.
         :arg bool debug: Enable debugging output.
         :arg stream log: Debug stream to write to.
         """
         self.data = ''
-        self.offset = 0
-
-        # FOLLOWING BLOCK CAN GO
-        self.metadata = container.Container()
-        self.genetic_symbols = []
-        self.additional_symbols = []
-        self.family_disease_locus = []
-        self.quantitative_value_locus = []
-        self.markers = []
-        self.unknown_data = []
-        self.members = []
-        self.relationships = container.Container()
-        self.text = []
-        self.crossovers = []
-
-        self.debug = debug
-        self.experimental = experimental
-        self.last_id = 0
-        self.log = log
-
-        self.eof_marker = ''
         self.parsed = {
             'METADATA': {
                 'GENETIC_SYMBOLS': [],
@@ -286,55 +261,56 @@ class FamParser(object):
                 'MEMBERS': [],
                 'DISEASE_LOCI': [],
                 'QUANTITATIVE_VALUE_LOCI': [],
-                'RELATIONSHIPS': {}
+                'RELATIONSHIPS': []
             },
             'TEXT_FIELDS': [],
             'UNKNOWN_FIELDS': []
         }
 
+        self._debug = debug
+        self._log = log
+
+        self._eof_marker = ''
+        self._last_id = 0
+        self._offset = 0
+        self._relationship_keys = set([])
+
 
     def _get_field(self, size=0, delimiter=chr(0x0d)):
         """
         Extract a field from {self.data} using either a fixed size, or a
-        delimiter. After reading, {self.offset} is set to the next field.
+        delimiter. After reading, {self._offset} is set to the next field.
 
         :arg int size: Size of fixed size field.
         :arg str delimiter: Delimeter for variable size field.
         """
         if size:
-            field = self.data[self.offset:self.offset + size]
+            field = self.data[self._offset:self._offset + size]
             extracted = size
         else:
-            field = self.data[self.offset:].split(delimiter)[0]
+            field = self.data[self._offset:].split(delimiter)[0]
             extracted = len(field) + 1
 
-        if self.debug:
-            self.log.write('0x{:06x}: '.format(self.offset))
+        if self._debug:
+            self._log.write('0x{:06x}: '.format(self._offset))
             if size:
-                self.log.write('{} ({})\n'.format(_raw(field), size))
+                self._log.write('{} ({})\n'.format(_raw(field), size))
             else:
-                self.log.write('{}\n'.format(field))
+                self._log.write('{}\n'.format(field))
 
-        self.offset += extracted
+        self._offset += extracted
         return field
 
 
     def _parse_markers(self):
         """
         """
-        marker = container.Container()
-        markers = 0
+        markers = []
 
-        while True:
-            flag = 'FLAG_{:02d}'.format(markers)
+        while _raw(self._get_field(1)) != '01':
+            markers.append({'DATA': _raw(self._get_field(439))})
 
-            marker[flag] = _raw(self._get_field(1))
-            if marker[flag] == '01':
-                break
-
-            marker['MARKER_{:02d}'.format(markers)] = self._get_field(439)
-            self.markers.append(marker)
-            markers += 1
+        return markers
 
 
     def _parse_header(self):
@@ -345,7 +321,7 @@ class FamParser(object):
         self.parsed['FAMILY']['NAME'] = self._get_field()
         self.parsed['FAMILY']['ID_NUMBER'] = self._get_field()
         self.parsed['METADATA']['FAMILY_DRAWN_BY'] = self._get_field()
-        self.last_id = _int(self._get_field(2))
+        self._last_id = _int(self._get_field(2))
         self._get_field(2) # LAST_INTERNAL_ID
 
         for i in range(7):
@@ -368,7 +344,7 @@ class FamParser(object):
         self.parsed['METADATA']['SELECTED_ID'] = _int(self._get_field(2))
 
         self._get_field(7)
-        self._parse_markers()
+        self.parsed['MARKERS'] = self._parse_markers()
         self._get_field(9)
 
 
@@ -378,47 +354,39 @@ class FamParser(object):
 
         :arg int person_id: The partner in this relationship.
         """
-        relationship = {}
+        relationship = {
+            'MEMBERS': sorted([
+                {'ID': person_id},
+                {'ID': _int(self._get_field(2))}
+            ])
+        }
 
-        relationship['MEMBER_1_ID'] = person_id
-        relationship['MEMBER_2_ID'] = _int(self._get_field(2))
-
-        _flags(relationship, _int(self._get_field(1)), 'RELATIONSHIP')
+        relationship.update(_flags(_int(self._get_field(1)), 'RELATIONSHIP'))
 
         relationship['RELATION_NAME'] = self._get_field()
 
-        key = str(tuple(sorted((person_id, relationship['MEMBER_2_ID']))))
-        self.parsed['FAMILY']['RELATIONSHIPS'][key] = relationship
+        key = str(relationship['MEMBERS'])
+        if key not in self._relationship_keys:
+            self.parsed['FAMILY']['RELATIONSHIPS'].append(relationship)
+            self._relationship_keys.add(key)
 
 
-    def _parse_crossover(self, person_id):
+    def _parse_chromosome(self):
         """
-        Extract crossover information.
+        Extract chromosome information.
 
-        :arg int person_id: The person who has these crossovers.
+        :return dict: Parsed info.
         """
-        crossover = container.Container()
-        alleles = 0
-        events = 0
+        chromosome = {
+            'LIST': []
+        }
 
-        crossover['ID'] = person_id
-        while alleles < 2:
-            flag = 'FLAG_{:02d}'.format(events)
+        while _raw(self._get_field(1)) != '22':
+            chromosome['LIST'].append({'DATA': _raw(self._get_field(11))})
 
-            crossover[flag] = _raw(self._get_field(1))
-            if crossover[flag] == '22':
-                crossover['ALLELE_{:02d}'.format(alleles)] = _raw(
-                    self._get_field(9))
-                if not alleles:
-                    crossover['SPACER_{:02d}'.format(alleles)] = _raw(
-                        self._get_field(2))
-                alleles += 1
-            else:
-                crossover['CROSSOVER_{:02d}'.format(events)] = _raw(
-                    self._get_field(11))
-            events += 1
+        chromosome['DATA'] = _raw(self._get_field(9))
 
-        self.crossovers.append(crossover)
+        return chromosome
 
 
     def _parse_member(self):
@@ -426,68 +394,71 @@ class FamParser(object):
         Extract person information.
         """
         member = {
-            'CROSSOVER': [],
-            'ETHNICITY': {},
-            'ORIGINS': {}
+            'CROSSOVER': {
+                'ALLELES': []
+            },
+            'SURNAME': self._get_field(),
+            'OTHER_SURNAMES': self._get_field(),
+            'FORENAMES': self._get_field(),
+            'KNOWN_AS': self._get_field(),
+            'MAIDEN_NAME': self._get_field(),
+            'ETHNICITY': {
+                'SELF': self._get_field(),
+                'M_G_MOTHER': self._get_field(),
+                'M_G_FATHER': self._get_field(),
+                'P_G_MOTHER': self._get_field(),
+                'P_G_FATHER': self._get_field()
+            },
+            'ORIGINS': {
+                'SELF': self._get_field(),
+                'M_G_MOTHER': self._get_field(),
+                'M_G_FATHER': self._get_field(),
+                'P_G_MOTHER': self._get_field(),
+                'P_G_FATHER': self._get_field()
+            },
+            'ADDRESS': self._get_field(),
+            'ADDITIONAL_INFORMATION': _info(self._get_field()),
+            'DATE_OF_BIRTH': _date(self._get_field(4)),
+            'DATE_OF_DEATH': _date(self._get_field(4)),
+            'SEX': _annotate(self._get_field(1), 'SEX'),
+            'ID': _int(self._get_field(2)),
+            'PEDIGREE_NUMBER': _int(self._get_field(2)),
+            'MOTHER_ID': _int(self._get_field(2)),
+            'FATHER_ID': _int(self._get_field(2)),
+            'INTERNAL_ID': _int(self._get_field(2)), # Remove?
+            'NUMBER_OF_INDIVIDUALS': _int(self._get_field(2)),
+            'AGE_GESTATION': self._get_field(),
+            'INDIVIDUAL_ID': self._get_field()
         }
-
-        member['SURNAME'] = self._get_field()
-        member['OTHER_SURNAMES'] = self._get_field()
-        member['FORENAMES'] = self._get_field()
-        member['KNOWN_AS'] = self._get_field()
-        member['MAIDEN_NAME'] = self._get_field()
-        member['ETHNICITY']['SELF'] = self._get_field()
-        member['ETHNICITY']['M_G_MOTHER'] = self._get_field()
-        member['ETHNICITY']['M_G_FATHER'] = self._get_field()
-        member['ETHNICITY']['P_G_MOTHER'] = self._get_field()
-        member['ETHNICITY']['P_G_FATHER'] = self._get_field()
-        member['ORIGINS']['SELF'] = self._get_field()
-        member['ORIGINS']['M_G_MOTHER'] = self._get_field()
-        member['ORIGINS']['M_G_FATHER'] = self._get_field()
-        member['ORIGINS']['P_G_MOTHER'] = self._get_field()
-        member['ORIGINS']['P_G_FATHER'] = self._get_field()
-        member['ADDRESS'] = self._get_field()
-        member['ADDITIONAL_INFORMATION'] = _info(self._get_field())
-        member['DATE_OF_BIRTH'] = _date(self._get_field(4))
-        member['DATE_OF_DEATH'] = _date(self._get_field(4))
-        member['SEX'] = _annotate(self._get_field(1), 'SEX')
-        member['ID'] = _int(self._get_field(2))
-        member['PEDIGREE_NUMBER'] = _int(self._get_field(2))
-        member['MOTHER_ID'] = _int(self._get_field(2))
-        member['FATHER_ID'] = _int(self._get_field(2))
-        member['INTERNAL_ID'] = _int(self._get_field(2)) # Remove?
-
-        member['NUMBER_OF_INDIVIDUALS'] = _int(self._get_field(1))
-        self._get_field(1)
-
-        member['AGE_GESTATION'] = self._get_field()
-        member['INDIVIDUAL_ID'] = self._get_field()
 
         number_of_spouses = _int(self._get_field(1))
         self._get_field(1)
         for spouse in range(number_of_spouses):
             self._parse_relationship(member['ID'])
 
-        member['TWIN_ID'] = _int(self._get_field(2))
-        member['COMMENT'] = self._get_field()
-        member['ADOPTION_TYPE'] = _annotate(self._get_field(1),
-            'ADOPTION_TYPE')
-        member['GENETIC_SYMBOLS'] = _description(self._get_field(1))
+        member.update({
+            'TWIN_ID': _int(self._get_field(2)),
+            'COMMENT': self._get_field(),
+            'ADOPTION_TYPE': _annotate(self._get_field(1), 'ADOPTION_TYPE'),
+            'GENETIC_SYMBOLS': _int(self._get_field(1))
+        })
         self._get_field(1)
 
-        _flags(member, _int(self._get_field(1)), 'INDIVIDUAL')
+        member.update(_flags(_int(self._get_field(1)), 'INDIVIDUAL'))
 
-        member['PROBAND'] = _annotate(self._get_field(1), 'PROBAND')
-        member['X_COORDINATE'] = _int(self._get_field(1))
-        self._get_field(1)
-        member['Y_COORDINATE'] = _int(self._get_field(1))
-        self._get_field(1)
-        member['ANNOTATION_1'] = _annotate(self._get_field(1), 'ANNOTATION_1')
-        member['MULTIPLE_PREGNANCIES'] = _annotate(self._get_field(1),
-            'MULTIPLE_PREGNANCIES')
+        member.update({
+            'PROBAND': _annotate(self._get_field(1), 'PROBAND'),
+            'X_COORDINATE': _int(self._get_field(2)),
+            'Y_COORDINATE': _int(self._get_field(2)),
+            'ANNOTATION_1': _annotate(self._get_field(1), 'ANNOTATION_1'),
+            'MULTIPLE_PREGNANCIES': _annotate(self._get_field(1),
+                'MULTIPLE_PREGNANCIES')
+        })
         self._get_field(3)
 
-        self._parse_crossover(member['ID'])
+        member['CROSSOVER']['ALLELES'].append(self._parse_chromosome())
+        member['CROSSOVER']['SPACER'] = _raw(self._get_field(2))
+        member['CROSSOVER']['ALLELES'].append(self._parse_chromosome())
 
         member['ANNOTATION_2'] = _annotate(self._get_field(1), 'ANNOTATION_2')
 
@@ -495,7 +466,7 @@ class FamParser(object):
         for i in range(7):
             self._get_field(24)
 
-        member['ADDITIONAL_SYMBOLS'] = _description(self._get_field(1))
+        member['ADDITIONAL_SYMBOLS'] = _int(self._get_field(1))
 
         # NOTE: DNA and BLOOD fields are switched in Cyrillic. i.e., if DNA is
         # selected, the BLOOD_LOCATION field is stored and if BLOOD is
@@ -507,7 +478,7 @@ class FamParser(object):
         if member['CELLS']:
             member['CELLS_LOCATION'] = self._get_field()
 
-        _flags(member, _int(self._get_field(1)), 'SAMPLE')
+        member.update(_flags(_int(self._get_field(1)), 'SAMPLE'))
 
         member['SAMPLE_NUMBER'] = self._get_field()
         self._get_field(3) # COLOUR
@@ -576,19 +547,8 @@ class FamParser(object):
         for text in range(number_of_text_fields):
             self._parse_text()
 
-        self.eof_marker = self._get_field(11)
+        self._eof_marker = self._get_field(11)
         self._get_field(15)
-
-
-    def _write_dictionary(self, dictionary, output_handle):
-        """
-        Write the content of a dictionary to a stream.
-
-        :arg dict dictionary: Dictionary to write.
-        :arg stream output_handle: Open writable handle.
-        """
-        for key, value in dictionary.items():
-            output_handle.write('{}: {}\n'.format(key, value))
 
 
     def read(self, input_handle):
@@ -601,13 +561,12 @@ class FamParser(object):
 
         self._parse_header()
 
-        current_id = 0
-        while current_id != self.last_id:
-            current_id = self._parse_member()
+        while self._parse_member() != self._last_id:
+            pass
 
         self._parse_footer()
 
-        if self.eof_marker != EOF_MARKER:
+        if self._eof_marker != EOF_MARKER:
             raise Exception('No EOF marker found.')
 
 
@@ -617,65 +576,29 @@ class FamParser(object):
 
         :arg stream output_handle: Open writable handle.
         """
-        output_handle.write('--- METADATA ---\n\n')
-        self._write_dictionary(self.metadata, output_handle)
+        if self._debug:
+            output_handle.write('\n\n--- JSON DUMP ---\n\n')
 
-        for index, symbol in enumerate(self.genetic_symbols):
-            output_handle.write('GENETIC_SYMBOL_{:02d}: {}\n'.format(index,
-                symbol))
-        for index, symbol in enumerate(self.additional_symbols):
-            output_handle.write('ADDITIONAL_SYMBOL_{:02d}: {}\n'.format(index,
-                symbol))
-
-        for member in self.members:
-            output_handle.write('\n\n--- MEMBER ---\n\n')
-            self._write_dictionary(member, output_handle)
-
-        for relationship in self.relationships.values():
-            output_handle.write('\n\n--- RELATIONSHIP ---\n\n')
-            self._write_dictionary(relationship, output_handle)
-
-        if self.experimental:
-            for locus in self.family_disease_locus:
-                output_handle.write('\n\n--- FAMILY_DISEASE_LOCUS ---\n\n')
-                self._write_dictionary(locus, output_handle)
-            output_handle.write('\n\n--- QUANTITATIVE_VALUE_LOCUS ---\n\n')
-            for index, locus in enumerate(self.quantitative_value_locus):
-                output_handle.write('LOCUS_{:02d}: {}\n'.format(index, locus))
-            for crossover in self.crossovers:
-                output_handle.write('\n\n--- CROSSOVER ---\n\n')
-                self._write_dictionary(crossover, output_handle)
-            for marker in self.markers:
-                output_handle.write('\n\n--- MARKER ---\n\n')
-                self._write_dictionary(marker, output_handle)
-
-        for text in self.text:
-            output_handle.write('\n\n--- TEXT ---\n\n')
-            self._write_dictionary(text, output_handle)
-
-        output_handle.write('\n\n--- JSON DUMP ---\n\n')
-        output_handle.write(json.dumps(self.parsed, indent=4,
+        output_handle.write(json.dumps(self.parsed, sort_keys=True, indent=4,
             separators=(',', ': ')))
-        output_handle.write('\n\n')
+        output_handle.write('\n')
 
-        if self.debug:
+        if self._debug:
             output_handle.write('\n\n--- DEBUG INFO ---\n\n')
             output_handle.write('Reached byte {} out of {}.\n'.format(
-                self.offset, len(self.data)))
+                self._offset, len(self.data)))
+            output_handle.write('EOF_MARKER: {}\n'.format(self._eof_marker))
 
-            output_handle.write('\nEOF_MARKER: {}\n'.format(self.eof_marker))
 
-
-def fam_parser(input_handle, output_handle, experimental=False, debug=False):
+def fam_parser(input_handle, output_handle, debug=False):
     """
     Main entry point.
 
     :arg stream input_handle: Open readable handle to a FAM file.
     :arg stream output_handle: Open writable handle.
-    :arg bool experimental: Enable experimental features.
     :arg bool debug: Enable debugging output.
     """
-    parser = FamParser(experimental, debug)
+    parser = FamParser(debug)
     parser.read(input_handle)
     parser.write(output_handle)
 
@@ -692,8 +615,6 @@ def main():
         help='input file in FAM format')
     parser.add_argument('output_handle', type=argparse.FileType('w'),
         help='output file')
-    parser.add_argument('-e', dest='experimental', action='store_true',
-        help='enable experimental features')
     parser.add_argument('-d', dest='debug', action='store_true',
         help='enable debugging')
 
