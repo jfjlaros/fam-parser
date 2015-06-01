@@ -212,7 +212,7 @@ def _flags(data, annotation):
 
     :return dict: Dictionary of flags and their values.
     """
-    bitfield = ord(data)
+    bitfield = _int(data)
     destination = {}
 
     for flag in map(lambda x: 2 ** x, range(8)):
@@ -262,7 +262,8 @@ class FamParser(object):
                 'MEMBERS': [],
                 'DISEASE_LOCI': [],
                 'QUANTITATIVE_VALUE_LOCI': [],
-                'RELATIONSHIPS': []
+                'RELATIONSHIPS': [],
+                'MARKERS': []
             },
             'TEXT_FIELDS': [],
             'UNKNOWN_FIELDS': []
@@ -274,6 +275,7 @@ class FamParser(object):
         self._eof_marker = ''
         self._last_id = 0
         self._offset = 0
+        self._raw_byte_count = 0
         self._relationship_keys = set([])
 
 
@@ -302,16 +304,35 @@ class FamParser(object):
         self._offset += extracted
         return field
 
+    def _parse_raw(self, destination, size):
+        """
+        """
+        if not 'RAW' in destination:
+            destination['RAW'] = []
+        destination['RAW'].append({'DATA': _raw(self._get_field(size))})
+        self._raw_byte_count += size
+
 
     def _parse_markers(self):
         """
         """
-        markers = []
-
         while _raw(self._get_field(1)) != '01':
-            markers.append({'DATA': _raw(self._get_field(439))})
+            self.parsed['FAMILY']['MARKERS'].append(
+                {'DATA': _raw(self._get_field(439))})
 
-        return markers
+
+    def _parse_disease_locus(self):
+        """
+        """
+        locus = {
+            'NAME': self._get_field(),
+            'COLOUR': _colour(self._get_field(3))
+        }
+
+        self._parse_raw(locus, 1)
+        locus['PATTERN'] = _annotate(self._get_field(1), 'PATTERN')
+
+        self.parsed['FAMILY']['DISEASE_LOCI'].append(locus)
 
 
     def _parse_header(self):
@@ -323,30 +344,25 @@ class FamParser(object):
         self.parsed['FAMILY']['ID_NUMBER'] = self._get_field()
         self.parsed['METADATA']['FAMILY_DRAWN_BY'] = self._get_field()
         self._last_id = _int(self._get_field(2))
-        self._get_field(2) # LAST_INTERNAL_ID
+        self._parse_raw(self.parsed, 2) # LAST_INTERNAL_ID
 
         for i in range(7):
-            locus = {}
-            locus['NAME'] = self._get_field()
-            locus['COLOUR'] = _colour(self._get_field(3))
-            self._get_field(1)
-            locus['PATTERN'] = _annotate(self._get_field(1), 'PATTERN')
-            self.parsed['FAMILY']['DISEASE_LOCI'].append(locus)
+            self._parse_disease_locus()
 
         self.parsed['FAMILY']['COMMENTS'] = self._get_field()
         self.parsed['METADATA']['CREATION_DATE'] = _date(self._get_field(4))
         self.parsed['METADATA']['LAST_UPDATED'] = _date(self._get_field(4))
 
-        self._get_field(5)
+        self._parse_raw(self.parsed, 5)
         for i in range(7):
             self.parsed['FAMILY']['QUANTITATIVE_VALUE_LOCI'].append(
                 {'NAME': self._get_field()})
 
         self.parsed['METADATA']['SELECTED_ID'] = _int(self._get_field(2))
 
-        self._get_field(7)
-        self.parsed['MARKERS'] = self._parse_markers()
-        self._get_field(9)
+        self._parse_raw(self.parsed, 7)
+        self._parse_markers()
+        self._parse_raw(self.parsed, 9)
 
 
     def _parse_relationship(self, person_id):
@@ -433,7 +449,7 @@ class FamParser(object):
         }
 
         number_of_spouses = _int(self._get_field(1))
-        self._get_field(1)
+        self._parse_raw(member, 1)
         for spouse in range(number_of_spouses):
             self._parse_relationship(member['ID'])
 
@@ -443,7 +459,7 @@ class FamParser(object):
             'ADOPTION_TYPE': _annotate(self._get_field(1), 'ADOPTION_TYPE'),
             'GENETIC_SYMBOLS': _int(self._get_field(1))
         })
-        self._get_field(1)
+        self._parse_raw(member, 1)
 
         member.update(_flags(self._get_field(1), 'INDIVIDUAL'))
 
@@ -455,7 +471,7 @@ class FamParser(object):
             'MULTIPLE_PREGNANCIES': _annotate(self._get_field(1),
                 'MULTIPLE_PREGNANCIES')
         })
-        self._get_field(3)
+        self._parse_raw(member, 3)
 
         member['CROSSOVER']['ALLELES'].append(self._parse_chromosome())
         member['CROSSOVER']['SPACER'] = _raw(self._get_field(2))
@@ -463,9 +479,9 @@ class FamParser(object):
 
         member['ANNOTATION_2'] = _annotate(self._get_field(1), 'ANNOTATION_2')
 
-        self._get_field(12)
+        self._parse_raw(member, 12)
         for i in range(7):
-            self._get_field(24)
+            self._parse_raw(member, 24)
 
         member['ADDITIONAL_SYMBOLS'] = _int(self._get_field(1))
 
@@ -482,10 +498,9 @@ class FamParser(object):
         member.update(_flags(self._get_field(1), 'SAMPLE'))
 
         member['SAMPLE_NUMBER'] = self._get_field()
-        self._get_field(3) # COLOUR
-        self._get_field(17)
-        self._get_field(2) # PATTERN
-
+        self._parse_raw(member, 3)  # COLOUR
+        self._parse_raw(member, 17)
+        self._parse_raw(member, 2)  # PATTERN
 
         self.parsed['FAMILY']['MEMBERS'].append(member)
 
@@ -500,11 +515,11 @@ class FamParser(object):
         text = {}
 
         text['CONTENT'] = _text(self._get_field())
-        self._get_field(54)
+        self._parse_raw(text, 54)
         text['X_COORDINATE'] = _int(self._get_field(1))
-        self._get_field(3)
+        self._parse_raw(text, 3)
         text['Y_COORDINATE'] = _int(self._get_field(1))
-        self._get_field(7)
+        self._parse_raw(text, 7)
 
         self.parsed['TEXT_FIELDS'].append(text)
 
@@ -514,13 +529,13 @@ class FamParser(object):
         Extract information from the footer.
         """
         number_of_unknown_data = _int(self._get_field(1))
-        self._get_field(2)
+        self._parse_raw(self.parsed, 2)
 
         for number in range(number_of_unknown_data):
             self.parsed['UNKNOWN_FIELDS'].append(_raw(self._get_field(12)))
 
         number_of_custom_descriptions = _int(self._get_field(1))
-        self._get_field(1)
+        self._parse_raw(self.parsed, 1)
 
         for description in range(19):
             self.parsed['METADATA']['GENETIC_SYMBOLS'].append({
@@ -537,19 +552,19 @@ class FamParser(object):
                 'NAME': self._get_field(),
                 'VALUE': self._get_field()})
 
-        self._get_field(14)
+        self._parse_raw(self.parsed, 14)
         self.parsed['METADATA']['ZOOM'] = _int(self._get_field(2))
         self.parsed['METADATA']['UNKNOWN_1'] = _raw(self._get_field(4)) # Zoom.
         self.parsed['METADATA']['UNKNOWN_2'] = _raw(self._get_field(4)) # Zoom.
-        self._get_field(20)
+        self._parse_raw(self.parsed, 20)
 
         number_of_text_fields = _int(self._get_field(1))
-        self._get_field(1)
+        self._parse_raw(self.parsed, 1)
         for text in range(number_of_text_fields):
             self._parse_text()
 
         self._eof_marker = self._get_field(11)
-        self._get_field(15)
+        self._parse_raw(self.parsed, 15)
 
 
     def read(self, input_handle):
@@ -588,6 +603,9 @@ class FamParser(object):
             output_handle.write('\n\n--- DEBUG INFO ---\n\n')
             output_handle.write('Reached byte {} out of {}.\n'.format(
                 self._offset, len(self.data)))
+            output_handle.write('{} bytes left unparsed ({:d}%)\n'.format(
+                self._raw_byte_count, self._raw_byte_count * 100 //
+                len(self.data)))
             output_handle.write('EOF_MARKER: {}\n'.format(self._eof_marker))
 
 
