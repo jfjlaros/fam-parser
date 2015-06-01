@@ -5,6 +5,7 @@ FAM parser.
 (C) 2015 Jeroen F.J. Laros <J.F.J.Laros@lumc.nl>
 """
 # NOTE: All integers are probably 2 bytes.
+# NOTE: Colours may be 4 bytes.
 
 import argparse
 import json
@@ -502,7 +503,7 @@ class FamParser(object):
         for i in range(7):
             self._parse_raw(member, 24)
 
-        member['ADDITIONAL_SYMBOLS'] = _int(self._get_field(1))
+        member['ADDITIONAL_SYMBOLS'] = _int(self._get_field(1)) # -19?
 
         # NOTE: DNA and BLOOD fields are switched in Cyrillic. i.e., if DNA is
         # selected, the BLOOD_LOCATION field is stored and if BLOOD is
@@ -623,7 +624,8 @@ class FamParser(object):
         else:
             if self._debug:
                 output_handle.write('--- YAML DUMP ---\n\n')
-            yaml.dump(self.parsed, output_handle, default_flow_style=False)
+            yaml.dump(self.parsed, output_handle, width=76,
+                default_flow_style=False)
 
         if self._debug:
             data_length = len(self.data)
