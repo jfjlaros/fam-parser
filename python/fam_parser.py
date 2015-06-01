@@ -9,6 +9,7 @@ FAM parser.
 import argparse
 import json
 import sys
+import yaml
 
 
 EOF_MARKER = 'End of File'
@@ -244,10 +245,11 @@ class FamParser(object):
     """
     FAM file parsing.
     """
-    def __init__(self, debug=False, log=sys.stdout):
+    def __init__(self, json_output=False, debug=False, log=sys.stdout):
         """
         Constructor.
 
+        :arg bool json_output: Select JSON instead of YAML output.
         :arg bool debug: Enable debugging output.
         :arg stream log: Debug stream to write to.
         """
@@ -268,6 +270,7 @@ class FamParser(object):
         }
 
         self._debug = debug
+        self._json_output = json_output
         self._log = log
 
         self._eof_marker = ''
@@ -576,12 +579,17 @@ class FamParser(object):
 
         :arg stream output_handle: Open writable handle.
         """
-        if self._debug:
-            output_handle.write('\n\n--- JSON DUMP ---\n\n')
-
-        output_handle.write(json.dumps(self.parsed, sort_keys=True, indent=4,
-            separators=(',', ': ')))
-        output_handle.write('\n')
+        if self._json_output == True:
+            if self._debug:
+                output_handle.write('\n\n--- JSON DUMP ---\n\n')
+            output_handle.write(json.dumps(self.parsed, sort_keys=True,
+                indent=4, separators=(',', ': ')))
+            output_handle.write('\n')
+        else:
+            if self._debug:
+                output_handle.write('\n\n--- YAML DUMP ---\n\n')
+            output_handle.write(yaml.dump(self.parsed,
+                default_flow_style=False))
 
         if self._debug:
             output_handle.write('\n\n--- DEBUG INFO ---\n\n')
@@ -590,15 +598,16 @@ class FamParser(object):
             output_handle.write('EOF_MARKER: {}\n'.format(self._eof_marker))
 
 
-def fam_parser(input_handle, output_handle, debug=False):
+def fam_parser(input_handle, output_handle, json_output=False, debug=False):
     """
     Main entry point.
 
     :arg stream input_handle: Open readable handle to a FAM file.
     :arg stream output_handle: Open writable handle.
+    :arg bool json_output: Select JSON instead of YAML output.
     :arg bool debug: Enable debugging output.
     """
-    parser = FamParser(debug)
+    parser = FamParser(json_output, debug)
     parser.read(input_handle)
     parser.write(output_handle)
 
@@ -617,6 +626,8 @@ def main():
         help='output file')
     parser.add_argument('-d', dest='debug', action='store_true',
         help='enable debugging')
+    parser.add_argument('-j', dest='json_output', action='store_true',
+        help='use JSON output instead of YAML')
 
     try:
         arguments = parser.parse_args()
