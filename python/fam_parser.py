@@ -246,11 +246,13 @@ class FamParser(object):
     """
     FAM file parsing.
     """
-    def __init__(self, json_output=False, debug=0, log=sys.stdout):
+    def __init__(self, json_output=False, experimental=False, debug=0,
+            log=sys.stdout):
         """
         Constructor.
 
         :arg bool json_output: Select JSON instead of YAML output.
+        :arg bool experimental: Enable experimental features.
         :arg int debug: Debugging level.
         :arg stream log: Debug stream to write to.
         """
@@ -264,15 +266,14 @@ class FamParser(object):
                 'MEMBERS': [],
                 'DISEASE_LOCI': [],
                 'QUANTITATIVE_VALUE_LOCI': [],
-                'RELATIONSHIPS': [],
-                'MARKERS': []
+                'RELATIONSHIPS': []
             },
-            'TEXT_FIELDS': [],
-            'UNKNOWN_FIELDS': []
+            'TEXT_FIELDS': []
         }
 
-        self._debug = debug
         self._json_output = json_output
+        self._debug = debug
+        self._experimental = experimental
         self._log = log
 
         self._eof_marker = ''
@@ -307,17 +308,35 @@ class FamParser(object):
         self._offset += extracted
         return field
 
+
     def _parse_raw(self, destination, size, key='RAW'):
         """
+        Stow unknown data away in a list.
+
+        This function is needed to skip data of which the function is unknown.
+        If `self._experimental` is set to `True`,  the data is placed in an
+        appropriate place. This is mainly for debugging purposes.
+
+        Ideally, this function will become obsolete (when we have finished the
+        reverse engineering completely).
+
+        :arg dict destination: Destination dictionary.
+        :arg int size: Bytes to be stowed away (see `_get_field`).
+        :arg str key: Name of the list to store the data in.
         """
-        if not key in destination:
-            destination[key] = []
-        destination[key].append({'DATA': _raw(self._get_field(size))})
+        if self._experimental:
+            if not key in destination:
+                destination[key] = []
+            destination[key].append({'DATA': _raw(self._get_field(size))})
+        else:
+            self._get_field(size)
+
         self._raw_byte_count += size
 
 
     def _parse_markers(self):
         """
+        Extract marker information.
         """
         while _raw(self._get_field(1)) != '01':
             self._parse_raw(self.parsed['FAMILY'], 439, 'MARKERS')
@@ -325,6 +344,7 @@ class FamParser(object):
 
     def _parse_disease_locus(self):
         """
+        Extract disease locus information.
         """
         locus = {
             'NAME': self._get_field(),
@@ -396,9 +416,7 @@ class FamParser(object):
 
         :return dict: Parsed info.
         """
-        chromosome = {
-            'LIST': []
-        }
+        chromosome = {}
 
         while _raw(self._get_field(1)) != '22':
             self._parse_raw(chromosome, 11, 'LIST')
@@ -619,16 +637,18 @@ class FamParser(object):
             output_handle.write('EOF_MARKER: {}\n'.format(self._eof_marker))
 
 
-def fam_parser(input_handle, output_handle, json_output=False, debug=0):
+def fam_parser(input_handle, output_handle, json_output=False,
+        experimental=False, debug=0):
     """
     Main entry point.
 
     :arg stream input_handle: Open readable handle to a FAM file.
     :arg stream output_handle: Open writable handle.
     :arg bool json_output: Select JSON instead of YAML output.
+    :arg bool experimental: Enable experimental features.
     :arg int debug: Debugging level.
     """
-    parser = FamParser(json_output, debug)
+    parser = FamParser(json_output, experimental, debug)
     parser.read(input_handle)
     parser.write(output_handle)
 
@@ -646,6 +666,8 @@ def main():
     parser.add_argument('output_handle', type=argparse.FileType('w'),
         help='output file')
     parser.add_argument('-d', dest='debug', type=int, help='debugging level')
+    parser.add_argument('-e', dest='experimental', action='store_true',
+        help='enable experimental features')
     parser.add_argument('-j', dest='json_output', action='store_true',
         help='use JSON output instead of YAML')
 
