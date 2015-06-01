@@ -212,10 +212,11 @@ def _flags(data, annotation):
 
     :return dict: Dictionary of flags and their values.
     """
+    bitfield = ord(data)
     destination = {}
 
     for flag in map(lambda x: 2 ** x, range(8)):
-        value = bool(flag & data)
+        value = bool(flag & bitfield)
 
         if flag not in FLAGS[annotation]:
             if value:
@@ -361,7 +362,7 @@ class FamParser(object):
             ])
         }
 
-        relationship.update(_flags(_int(self._get_field(1)), 'RELATIONSHIP'))
+        relationship.update(_flags(self._get_field(1), 'RELATIONSHIP'))
 
         relationship['RELATION_NAME'] = self._get_field()
 
@@ -444,7 +445,7 @@ class FamParser(object):
         })
         self._get_field(1)
 
-        member.update(_flags(_int(self._get_field(1)), 'INDIVIDUAL'))
+        member.update(_flags(self._get_field(1), 'INDIVIDUAL'))
 
         member.update({
             'PROBAND': _annotate(self._get_field(1), 'PROBAND'),
@@ -478,7 +479,7 @@ class FamParser(object):
         if member['CELLS']:
             member['CELLS_LOCATION'] = self._get_field()
 
-        member.update(_flags(_int(self._get_field(1)), 'SAMPLE'))
+        member.update(_flags(self._get_field(1), 'SAMPLE'))
 
         member['SAMPLE_NUMBER'] = self._get_field()
         self._get_field(3) # COLOUR
