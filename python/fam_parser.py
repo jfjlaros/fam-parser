@@ -246,12 +246,12 @@ class FamParser(object):
     """
     FAM file parsing.
     """
-    def __init__(self, json_output=False, debug=False, log=sys.stdout):
+    def __init__(self, json_output=False, debug=0, log=sys.stdout):
         """
         Constructor.
 
         :arg bool json_output: Select JSON instead of YAML output.
-        :arg bool debug: Enable debugging output.
+        :arg int debug: Debugging level.
         :arg stream log: Debug stream to write to.
         """
         self.data = ''
@@ -297,7 +297,7 @@ class FamParser(object):
             field = self.data[self._offset:].split(delimiter)[0]
             extracted = len(field) + 1
 
-        if self._debug:
+        if self._debug > 1:
             self._log.write('0x{:06x}: '.format(self._offset))
             if size:
                 self._log.write('{} ({})\n'.format(_raw(field), size))
@@ -307,12 +307,12 @@ class FamParser(object):
         self._offset += extracted
         return field
 
-    def _parse_raw(self, destination, size):
+    def _parse_raw(self, destination, size, key='RAW'):
         """
         """
-        if not 'RAW' in destination:
-            destination['RAW'] = []
-        destination['RAW'].append({'DATA': _raw(self._get_field(size))})
+        if not key in destination:
+            destination[key] = []
+        destination[key].append({'DATA': _raw(self._get_field(size))})
         self._raw_byte_count += size
 
 
@@ -320,8 +320,7 @@ class FamParser(object):
         """
         """
         while _raw(self._get_field(1)) != '01':
-            self.parsed['FAMILY']['MARKERS'].append(
-                {'DATA': _raw(self._get_field(439))})
+            self._parse_raw(self.parsed['FAMILY'], 439, 'MARKERS')
 
 
     def _parse_disease_locus(self):
@@ -402,9 +401,8 @@ class FamParser(object):
         }
 
         while _raw(self._get_field(1)) != '22':
-            chromosome['LIST'].append({'DATA': _raw(self._get_field(11))})
-
-        chromosome['DATA'] = _raw(self._get_field(9))
+            self._parse_raw(chromosome, 11, 'LIST')
+        self._parse_raw(chromosome, 9)
 
         return chromosome
 
@@ -477,7 +475,7 @@ class FamParser(object):
         self._parse_raw(member, 3)
 
         member['CROSSOVER']['ALLELES'].append(self._parse_chromosome())
-        member['CROSSOVER']['SPACER'] = _raw(self._get_field(2))
+        self._parse_raw(member['CROSSOVER'], 2)
         member['CROSSOVER']['ALLELES'].append(self._parse_chromosome())
 
         member['ANNOTATION_2'] = _annotate(self._get_field(1), 'ANNOTATION_2')
@@ -535,7 +533,7 @@ class FamParser(object):
         self._parse_raw(self.parsed, 2)
 
         for number in range(number_of_unknown_data):
-            self.parsed['UNKNOWN_FIELDS'].append(_raw(self._get_field(12)))
+            self._parse_raw(self.parsed, 12, 'UNKNOWN_FIELDS')
 
         number_of_custom_descriptions = _int(self._get_field(1))
         self._parse_raw(self.parsed, 1)
@@ -595,35 +593,40 @@ class FamParser(object):
 
         :arg stream output_handle: Open writable handle.
         """
+        if self._debug > 1:
+            output_handle.write('\n\n')
+
         if self._json_output == True:
             if self._debug:
-                output_handle.write('\n\n--- JSON DUMP ---\n\n')
+                output_handle.write('--- JSON DUMP ---\n\n')
             output_handle.write(json.dumps(self.parsed, sort_keys=True,
                 indent=4, separators=(',', ': ')))
             output_handle.write('\n')
         else:
             if self._debug:
-                output_handle.write('\n\n--- YAML DUMP ---\n\n')
+                output_handle.write('--- YAML DUMP ---\n\n')
             yaml.dump(self.parsed, output_handle, default_flow_style=False)
 
         if self._debug:
+            data_length = len(self.data)
+            parsed = data_length - self._raw_byte_count
+
             output_handle.write('\n\n--- DEBUG INFO ---\n\n')
             output_handle.write('Reached byte {} out of {}.\n'.format(
-                self._offset, len(self.data)))
-            output_handle.write('{} bytes left unparsed ({:d}%)\n'.format(
-                self._raw_byte_count, self._raw_byte_count * 100 //
-                len(self.data)))
+                self._offset, data_length))
+            output_handle.write('{} bytes parsed ({:d}%)\n'.format(
+                parsed, parsed * 100 // len(self.data)))
             output_handle.write('EOF_MARKER: {}\n'.format(self._eof_marker))
 
 
-def fam_parser(input_handle, output_handle, json_output=False, debug=False):
+def fam_parser(input_handle, output_handle, json_output=False, debug=0):
     """
     Main entry point.
 
     :arg stream input_handle: Open readable handle to a FAM file.
     :arg stream output_handle: Open writable handle.
     :arg bool json_output: Select JSON instead of YAML output.
-    :arg bool debug: Enable debugging output.
+    :arg int debug: Debugging level.
     """
     parser = FamParser(json_output, debug)
     parser.read(input_handle)
@@ -642,8 +645,7 @@ def main():
         help='input file in FAM format')
     parser.add_argument('output_handle', type=argparse.FileType('w'),
         help='output file')
-    parser.add_argument('-d', dest='debug', action='store_true',
-        help='enable debugging')
+    parser.add_argument('-d', dest='debug', type=int, help='debugging level')
     parser.add_argument('-j', dest='json_output', action='store_true',
         help='use JSON output instead of YAML')
 
