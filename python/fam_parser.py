@@ -273,7 +273,7 @@ class FamParser(object):
 
         self._json_output = json_output
         self._debug = debug
-        self._experimental = experimental
+        self._experimental = experimental | bool(debug)
         self._log = log
 
         self._eof_marker = ''
