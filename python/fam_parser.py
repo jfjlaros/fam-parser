@@ -291,6 +291,8 @@ class FamParser(object):
 
         :arg int size: Size of fixed size field.
         :arg str delimiter: Delimeter for variable size field.
+
+        :return str: Content of the requested field.
         """
         if size:
             field = self.data[self._offset:self._offset + size]
