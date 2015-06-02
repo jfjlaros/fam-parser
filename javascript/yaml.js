@@ -29,7 +29,7 @@ function buildYaml(object, indent) {
       index,
       key;
 
-  for (index = 0; index < indent; index++){
+  for (index = 0; index < indent; index++) {
     padding += '  ';
   }
 
