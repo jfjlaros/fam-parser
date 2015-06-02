@@ -22,7 +22,7 @@ echo -n "Testing JavaScript interface "
 for i in data/*.fam data/*.FAM; do
   nodejs javascript/cli.js $i > $TEMP_FILE
   
-  if ! grep "^  EOF_MARKER: 'End of File' }$" $TEMP_FILE > /dev/null; then
+  if ! grep "^EOF_MARKER: End of File$" $TEMP_FILE > /dev/null; then
     echo
     echo Test failed for file $i.
   else

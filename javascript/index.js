@@ -6,9 +6,11 @@ FAM parser.
 (C) 2015 Jeroen F.J. Laros <J.F.J.Laros@lumc.nl>
 */
 // NOTE: All integers are probably 2 bytes.
+// NOTE: Colours may be 4 bytes.
 
-var DESC_PREFIX = 'DESC_',
-    EOF_MARKER = 'End of File',
+var toYaml = require('./yaml');
+
+var EOF_MARKER = 'End of File',
     MAPS = {
       'PROBAND': {
         0x00: 'NOT_A_PROBAND',
@@ -24,15 +26,21 @@ var DESC_PREFIX = 'DESC_',
         0x01: 'FEMALE',
         0x02: 'UNKNOWN'
       },
-      'TWIN_STATUS': {
-        0x00: 'NONE',
-        0x01: 'MONOZYGOUS',
-        0x02: 'DIZYGOUS',
-        0x03: 'UNKNOWN',
+      'MULTIPLE_PREGNANCIES': {
+        0x00: 'SINGLETON',
+        0x01: 'MONOZYGOUS_TWINS',
+        0x02: 'DIZYGOUS_TWINS',
+        0x03: 'TWIN_TYPE_UNKNOWN',
         0x04: 'TRIPLET',
         0x05: 'QUADRUPLET',
         0x06: 'QUINTUPLET',
         0x07: 'SEXTUPLET'
+      },
+      'ADOPTION_TYPE': {
+        0x00: 'ADOPTED_INTO_FAMILY',
+        0x01: 'NOT_ADOPTED',
+        0x02: 'POSSIBLY_ADOPTED_INTO_FAMILY',
+        0x03: 'ADOPTED_OUT_OF_FAMILY'
       },
       'ANNOTATION_1': {
         0x00: 'NONE',
@@ -45,18 +53,61 @@ var DESC_PREFIX = 'DESC_',
       'ANNOTATION_2': {
         0x00: 'NONE',
         0x01: 'AFFECTED'
+      },
+      'PATTERN': {
+        0x00: 'HORIZONTAL',
+        0x01: 'VERTICAL',
+        0x02: 'SLANTED_BACK',
+        0x03: 'SLANTED_FORWARD',
+        0x04: 'GRID',
+        0x05: 'DIAGONAL_GRID',
+        0xff: 'FILL'
+      },
+      'GENETIC_SYMBOL': {
+        0x00: 'CLEAR',
+        0x01: 'UNAFFECTED',
+        0x02: 'AFFECTED',
+        0x03: 'CARRIER',
+        0x04: 'POSSIBLY_AFFECTED',
+        0x05: 'Q1',
+        0x06: 'Q2',
+        0x07: 'Q3',
+        0x08: 'Q4',
+        0x09: 'HETEROZYGOUS',
+        0x0a: 'Q1_Q3',
+        0x0b: 'Q1_Q4',
+        0x0c: 'Q2_Q3',
+        0x0d: 'Q2_Q4',
+        0x0e: 'Q3_Q4',
+        0x0f: 'Q1_Q2_Q3',
+        0x10: 'Q1_Q2_Q4',
+        0x11: 'Q1_Q3_Q4',
+        0x12: 'Q2_Q3_Q4'
+      },
+      'ADDITIONAL_SYMBOL': {
+        0X00: 'CROSS',
+        0X01: 'PLUS',
+        0X02: 'MINUS',
+        0X03: 'O'
       }
     },
     FLAGS = {
       'INDIVIDUAL': {
+        0x01: 'BLOOD',
+        0x02: 'DNA',
         0x04: 'LOOP_BREAKPOINT',
-        0x08: 'HIDE_INFO'
+        0x08: 'HIDE_INFO',
+        0x10: 'COMMITTED_SUICIDE',
+        0x20: 'CELLS'
       },
       'RELATIONSHIP': {
         0x01: 'INFORMAL',
         0x02: 'CONSANGUINEOUS',
         0x04: 'SEPARATED',
         0x08: 'DIVORCED'
+      },
+      'SAMPLE': {
+        0x01: 'SAMPLE_REQUIRED'
       }
     };
 
@@ -109,12 +160,22 @@ function convertToHex(data) {
 }
 
 /*
+Update a dictionary with the properties of another dictionary.
+
+:arg dict target: Target dictionary.
+:arg dict source: Source dictionary.
+*/
+function update(target, source) {
+  var item;
+
+  for (item in source) {
+    target[item] = source[item];
+  }
+}
+
+/*
 Helper functions.
 */
-
-function identity(data) {
-  return data;
-}
 
 function trim(data) {
   return data.split(String.fromCharCode(0x00))[0];
@@ -124,20 +185,23 @@ function raw(data) {
   return convertToHex(data);
 }
 
-function bit(data) {
-  return pad(ord(data).toString(2), 8);
-}
-
 function comment(data) {
-  return data.split(String.fromCharCode(0x09) + String.fromCharCode(0x03)).join('\n');
+  return data.split(String.fromCharCode(0x09) +
+    String.fromCharCode(0x03)).join('\n');
 }
 
-function freetext(data) {
-  return data.split(String.fromCharCode(0x0b) + String.fromCharCode(0x0b)).join('\n');
+function info(data) {
+  return data.split(String.fromCharCode(0xe9) +
+    String.fromCharCode(0xe9)).join('\n');
+}
+
+function freeText(data) {
+  return data.split(String.fromCharCode(0x0b) +
+    String.fromCharCode(0x0b)).join('\n');
 }
 
 function description(data) {
-  return DESC_PREFIX + pad(ord(data), 2)
+  return DESC_PREFIX + pad(ord(data), 2);
 }
 
 /*
@@ -162,6 +226,10 @@ function integer(data) {
   return result;
 }
 
+function colour(data) {
+  return '0x' + pad(hex(integer(data), 6));
+}
+
 /*
 Decode a date.
 
@@ -176,7 +244,7 @@ function date(data) {
   var dateInt = integer(data);
 
   if (dateInt) {
-    if (dateInt === 0xffffff) {
+    if (dateInt === 0xffffffff) {
       return 'DEFINED';
     }
     return dateInt.toString();
@@ -204,12 +272,13 @@ function annotate(data, annotation) {
 /*
 Explode a bitfield into flags.
 
-:arg dict destination: Destination dictionary.
-:arg int bitfield: Bit field.
-:arg str annotation: Annotation of {bitfield}.
+:arg int data: Bit field.
+:arg str annotation: Annotation of {data}.
 */
-function flags(destination, bitfield, annotation) {
-  var flag,
+function flags(data, annotation) {
+  var bitfield = integer(data),
+      destination = {},
+      flag,
       value;
 
   for (flag = 0x01; flag < 0x100; flag <<= 1) {
@@ -224,6 +293,7 @@ function flags(destination, bitfield, annotation) {
       destination[FLAGS[annotation][flag]] = value;
     }
   }
+  return destination;
 }
 
 /*
@@ -231,24 +301,33 @@ FAM file parsing.
 */
 function FamParser(fileContent) {
   var data = fileContent,
-      offset = 0,
+      parsed = {
+        'METADATA': {
+          'GENETIC_SYMBOLS': [],
+          'ADDITIONAL_SYMBOLS': []
+        },
+        'FAMILY': {
+          'MEMBERS': [],
+          'DISEASE_LOCI': [],
+          'QUANTITATIVE_VALUE_LOCI': [],
+          'RELATIONSHIPS': []
+        },
+        'TEXT_FIELDS': []
+      },
       delimiter = 0x0d,
-      metadata = {},
-      members = [],
-      relationships = {},
-      texts = [],
-      crossovers = [];
+      eofMarker = '',
+      lastId = 0,
+      offset = 0,
+      relationshipKeys = {}; // Should be a set.
 
   /*
   Extract a field from {data} using either a fixed size, or a delimiter. After
   reading, {offset} is set to the next field.
 
-  :arg object destination: Destination object.
   :arg int size: Size of fixed size field.
-  :arg str name: Field name.
-  :arg function func: Conversion function.
+  :return str: Content of the requested field.
   */
-  function setField(destination, size, name, func) {
+  function getField(size) {
     var field,
         extracted;
 
@@ -261,20 +340,32 @@ function FamParser(fileContent) {
       extracted = field.length + 1;
     }
 
-    if (name !== undefined) {
-      if (func !== undefined) {
-        if (func === annotate) {
-          destination[name] = annotate(field, name);
-        }
-        else {
-          destination[name] = func(field);
-        }
-      }
-      else {
-        destination[name] = identity(field);
-      }
-    }
     offset += extracted;
+    return field;
+  }
+
+  /*
+  Extract marker information.
+  */
+  function parseMarkers() {
+    while (raw(getField(1)) !== '01') {
+      getField(439);
+    }
+  }
+
+  /*
+  Extract disease locus information.
+  */
+  function parseDiseaseLocus() {
+    var locus = {
+          'NAME': getField(),
+          'COLOUR': colour(getField(3))
+        };
+
+    getField(1);
+    locus['PATTERN'] = annotate(getField(1), 'PATTERN');
+
+    parsed['FAMILY']['DISEASE_LOCI'].push(locus);
   }
 
   /*
@@ -283,30 +374,31 @@ function FamParser(fileContent) {
   function parseHeader() {
     var index;
 
-    setField(metadata, 26, 'SOURCE', trim);
-    setField(metadata, 0, 'FAMILY_NAME');
-    setField(metadata, 0, 'FAMILY_ID');
-    setField(metadata, 0, 'AUTHOR');
-    setField(metadata, 2, 'LAST_ID', integer);
-    setField(metadata, 2, 'LAST_INTERNAL_ID', integer);
+    parsed['METADATA']['SOURCE'] = trim(getField(26));
+    parsed['FAMILY']['NAME'] = getField();
+    parsed['FAMILY']['ID_NUMBER'] = getField();
+    parsed['METADATA']['FAMILY_DRAWN_BY'] = getField();
+    lastId = integer(getField(2));
+    getField(2); // LAST_INTERNAL_ID
 
     for (index = 0; index < 7; index++) {
-      setField(metadata, 0);
-      setField(metadata, 5);
+      parseDiseaseLocus();
     }
 
-    setField(metadata, 0, 'COMMENT');
-    setField(metadata, 3, 'DATE_CREATED', date);
-    setField(metadata, 1);
-    setField(metadata, 3, 'DATE_UPDATED', date);
+    parsed['FAMILY']['COMMENTS'] = getField();
+    parsed['METADATA']['CREATION_DATE'] = date(getField(4));
+    parsed['METADATA']['LAST_UPDATED'] = date(getField(4));
 
-    setField(metadata, 6);
+    getField(5);
     for (index = 0; index < 7; index++) {
-      setField(metadata, 0);
+      parsed['FAMILY']['QUANTITATIVE_VALUE_LOCI'].push({'NAME': getField()});
     }
 
-    setField(metadata, 2, 'SELECTED_ID', integer);
-    setField(metadata, 17);
+    parsed['METADATA']['SELECTED_ID'] = integer(getField(2));
+
+    getField(7);
+    parseMarkers();
+    getField(9);
   }
 
   /*
@@ -315,126 +407,137 @@ function FamParser(fileContent) {
   :arg int personId: The partner in this relationship.
   */
   function parseRelationship(personId) {
-    var relationship = {},
-        relationFlags,
+    var relationship = {
+          'MEMBERS': [
+            {'ID': personId},
+            {'ID': integer(getField(2))}
+          ].sort()
+        },
         key;
 
-    relationship.MEMBER_1_ID = personId;
-    setField(relationship, 2, 'MEMBER_2_ID', integer);
-    setField(relationship, 1, 'RELATION_FLAGS', integer);
-    setField(relationship, 0, 'RELATION_NAME');
+    update(relationship, flags(getField(1), 'RELATIONSHIP'));
 
-    flags(relationship, relationship['RELATION_FLAGS'], 'RELATIONSHIP');
+    relationship['RELATION_NAME'] = getField();
 
-    key = [personId, relationship.MEMBER_2_ID].sort().toString();
-    if (relationships[key] === undefined) {
-      relationships[key] = relationship;
+    key = [relationship['MEMBERS'][0].ID,
+      relationship['MEMBERS'][1].ID].toString();
+    if (relationshipKeys[key] === undefined) {
+      parsed['FAMILY']['RELATIONSHIPS'].push(relationship);
+      relationshipKeys[key] = true;
     }
   }
 
   /*
-  Extract crossover information.
-
-  :arg int personId: The person who has these crossovers.
+  Extract chromosome information.
   */
-  function parseCrossover(personId) {
-    var crossover = {},
-        alleles = 0,
-        events = 0,
-        flag;
+  function parseChromosome() {
+    var chromosome = {};
 
-    crossover.ID = personId;
-    while (alleles < 2) {
-      flag = 'FLAG_' + pad(events, 2);
-
-      setField(crossover, 1, flag, raw);
-      if (crossover[flag] === '22') {
-        setField(crossover, 9, 'ALLELE_' + pad(alleles, 2), raw);
-        if (!alleles) {
-          setField(crossover, 2, 'SPACER_' + pad(alleles, 2), raw);
-        }
-        alleles++;
-      }
-      else {
-        setField(crossover, 11, 'CROSSOVER_' + pad(events, 2), raw);
-      }
-      events++;
+    while (raw(getField(1)) !== '22') {
+      getField(11);
     }
-
-    crossovers.push(crossover);
+    getField(9);
   }
 
   /*
   Extract person information.
   */
   function parseMember() {
-    var member = {},
+    var member = {
+          'SURNAME': getField(),
+          'OTHER_SURNAMES': getField(),
+          'FORENAMES': getField(),
+          'KNOWN_AS': getField(),
+          'MAIDEN_NAME': getField(),
+          'ETHNICITY': {
+            'SELF': getField(),
+            'M_G_MOTHER': getField(),
+            'M_G_FATHER': getField(),
+            'P_G_MOTHER': getField(),
+            'P_G_FATHER': getField()
+          },
+          'ORIGINS': {
+            'SELF': getField(),
+            'M_G_MOTHER': getField(),
+            'M_G_FATHER': getField(),
+            'P_G_MOTHER': getField(),
+            'P_G_FATHER': getField()
+          },
+          'ADDRESS': getField(),
+          'ADDITIONAL_INFORMATION': info(getField()),
+          'DATE_OF_BIRTH': date(getField(4)),
+          'DATE_OF_DEATH': date(getField(4)),
+          'SEX': annotate(getField(1), 'SEX'),
+          'ID': integer(getField(2)),
+          'PEDIGREE_NUMBER': integer(getField(2)),
+          'MOTHER_ID': integer(getField(2)),
+          'FATHER_ID': integer(getField(2)),
+          'INTERNAL_ID': integer(getField(2)), // Remove?
+          'NUMBER_OF_INDIVIDUALS': integer(getField(2)),
+          'AGE_GESTATION': getField(),
+          'INDIVIDUAL_ID': getField()
+        },
+        numberOfSpouses = integer(getField(1)),
         index;
 
-    setField(member, 0, 'SURNAME');
-    setField(member, 0);
-    setField(member, 0, 'FORENAMES');
-    setField(member, 0);
-    setField(member, 0, 'MAIDEN_NAME');
-
-    for (index = 0; index < 11; index++) {
-      setField(member, 0);
-    }
-
-    setField(member, 0, 'COMMENT', comment);
-    setField(member, 3, 'DATE_OF_BIRTH', date);
-    setField(member, 1);
-    setField(member, 3, 'DATE_OF_DEATH', date);
-    setField(member, 1);
-    setField(member, 1, 'SEX', annotate);
-    setField(member, 2, 'ID', integer);
-    setField(member, 2, 'PEDIGREE_NUMBER', integer);
-    setField(member, 2, 'MOTHER_ID', integer);
-    setField(member, 2, 'FATHER_ID', integer);
-    setField(member, 2, 'INTERNAL_ID', integer);
-    setField(member, 1, 'NUMBER_OF_INDIVIDUALS', integer);
-    setField(member, 1);
-    setField(member, 0, 'AGE_GESTATION');
-    setField(member, 0, 'INDIVIDUAL_ID');
-    setField(member, 1, 'NUMBER_OF_SPOUSES', integer);
-    setField(member, 1);
-
-    for (index = 0; index < member.NUMBER_OF_SPOUSES; index++) {
+    getField(1);
+    for (index = 0; index < numberOfSpouses; index++) {
       parseRelationship(member.ID);
     }
 
-    setField(member, 2, 'TWIN_ID', integer);
-    setField(member, 0);
-    setField(member, 1);
-    setField(member, 1, 'DESCRIPTION_1', description);
-    setField(member, 1);
-    setField(member, 1, 'INDIVIDUAL_FLAGS', integer);
-    setField(member, 1, 'PROBAND', annotate);
-    setField(member, 1, 'X_COORDINATE', integer);
-    setField(member, 1);
-    setField(member, 1, 'Y_COORDINATE', integer);
-    setField(member, 1);
-    setField(member, 1, 'ANNOTATION_1', annotate);
-    setField(member, 1, 'TWIN_STATUS', annotate);
-    setField(member, 3);
+    update(member, {
+      'TWIN_ID': integer(getField(2)),
+      'COMMENT': getField(),
+      'ADOPTION_TYPE': annotate(getField(1), 'ADOPTION_TYPE'),
+      'GENETIC_SYMBOLS': integer(getField(1))
+    });
+    getField(1);
 
-    parseCrossover(member.ID);
+    update(member, flags(getField(1), 'INDIVIDUAL'));
 
-    setField(member, 1, 'ANNOTATION_2', annotate);
+    update(member, {
+      'PROBAND': annotate(getField(1), 'PROBAND'),
+      'X_COORDINATE': integer(getField(2)),
+      'Y_COORDINATE': integer(getField(2)),
+      'ANNOTATION_1': annotate(getField(1), 'ANNOTATION_1'),
+      'MULTIPLE_PREGNANCIES': annotate(getField(1), 'MULTIPLE_PREGNANCIES')
+    });
+    getField(3);
 
-    setField(member, 12);
+    parseChromosome();
+    getField(2);
+    parseChromosome();
+
+    member['ANNOTATION_2'] = annotate(getField(1), 'ANNOTATION_2');
+
+    getField(12);
     for (index = 0; index < 7; index++) {
-      setField(member, 24);
+      getField(24);
     }
 
-    setField(member, 1, 'DESCRIPTION_2', description);
-    setField(member, 1);
-    setField(member, 0, 'UNKNOWN_TEXT', identity);
-    setField(member, 22);
+    member['ADDITIONAL_SYMBOLS'] = integer(getField(1)); // -19?
 
-    flags(member, member['INDIVIDUAL_FLAGS'], 'INDIVIDUAL');
+    // NOTE: DNA and BLOOD fields are switched in Cyrillic. i.e., if DNA is
+    // selected, the BLOOD_LOCATION field is stored and if BLOOD is
+    // selected, the DNA_LOCATION field is stored. This is probably a bug.
+    if (member['DNA']) {
+        member['DNA_LOCATION'] = getField();
+    }
+    if (member['BLOOD']) {
+        member['BLOOD_LOCATION'] = getField();
+    }
+    if (member['CELLS']) {
+        member['CELLS_LOCATION'] = getField();
+    }
 
-    members.push(member);
+    update(member, flags(getField(1), 'SAMPLE'));
+
+    member['SAMPLE_NUMBER'] = getField();
+    getField(3);  // COLOUR
+    getField(17);
+    getField(2);  // PATTERN
+
+    parsed['FAMILY']['MEMBERS'].push(member);
 
     return member['ID'];
   }
@@ -446,73 +549,85 @@ function FamParser(fileContent) {
     // TODO: X and Y coordinates have more digits.
     var text = {};
 
-    setField(text, 0, 'TEXT', freetext);
-    setField(text, 54);
-    setField(text, 1, 'X_COORDINATE', integer);
-    setField(text, 3);
-    setField(text, 1, 'Y_COORDINATE', integer);
-    setField(text, 7);
+    text['CONTENT'] = freeText(getField());
+    getField(54);
+    text['X_COORDINATE'] = integer(getField(1));
+    getField(3);
+    text['Y_COORDINATE'] = integer(getField(1));
+    getField(7);
 
-    texts.push(text)
-   }
+    parsed['TEXT_FIELDS'].push(text);
+  }
 
   /*
   Extract information from the footer.
   */
   function parseFooter() {
-    var index;
+    var numberOfUnknownData = integer(getField(1)),
+        numberOfCustomDescriptions,
+        numberOfTextFields,
+        index;
 
-    setField(metadata, 1, 'NUMBER_OF_UNKNOWN_DATA', integer);
-    setField(metadata, 2);
+    getField(2);
 
-    for (index = 0; index < metadata.NUMBER_OF_UNKNOWN_DATA; index++) {
-      setField(metadata, 12, 'UNKNOWN_DATA_' + pad(index, 2), raw);
+    for (index = 0; index < numberOfUnknownData; index++) {
+      getField(12);
     }
 
-    setField(metadata, 1, 'NUMBER_OF_CUSTOM_DESC', integer);
-    setField(metadata, 1);
+    numberOfCustomDescriptions = integer(getField(1));
+    getField(1);
 
-    for (index = 0; index < 23; index++) {
-      setField(metadata, 0, DESC_PREFIX + pad(index, 2), identity);
+    for (index = 0; index < 19; index++) {
+      parsed['METADATA']['GENETIC_SYMBOLS'].push({
+        'NAME': MAPS['GENETIC_SYMBOL'][index],
+        'VALUE': getField()
+      });
     }
 
-    for (index = 0; index < metadata.NUMBER_OF_CUSTOM_DESC; index++) {
-      setField(metadata, 0, 'CUSTOM_DESC_' + pad(index, 2), identity);
-      setField(metadata, 0, 'CUSTOM_CHAR_' + pad(index, 2), identity);
+    for (index = 0; index < 4; index++) {
+      parsed['METADATA']['ADDITIONAL_SYMBOLS'].push({
+        'NAME': MAPS['ADDITIONAL_SYMBOL'][index],
+        'VALUE': getField()
+      });
     }
 
-    setField(metadata, 14);
-    setField(metadata, 2, 'ZOOM', integer);
-    setField(metadata, 4, 'UNKNOWN_1', raw); // Zoom.
-    setField(metadata, 4, 'UNKNOWN_2', raw); // Zoom.
-    setField(metadata, 20);
-    setField(metadata, 1, 'NUMBER_OF_TEXT_FIELDS', integer);
-    setField(metadata, 1);
+    for (index = 0; index < numberOfCustomDescriptions; index++) {
+      parsed['METADATA']['ADDITIONAL_SYMBOLS'].push({
+        'NAME': getField(),
+        'VALUE': getField()
+      });
+    }
 
-    for (index = 0; index < metadata.NUMBER_OF_TEXT_FIELDS; index++) {
+    getField(14);
+    parsed['METADATA']['ZOOM'] = integer(getField(2));
+    parsed['METADATA']['UNKNOWN_1'] = raw(getField(4)); // Zoom.
+    parsed['METADATA']['UNKNOWN_2'] = raw(getField(4)); // Zoom.
+    getField(20);
+
+    numberOfTextFields = integer(getField(1));
+    getField(1);
+
+    for (index = 0; index < numberOfTextFields; index++) {
       parseText();
     }
 
-    setField(metadata, 11, 'EOF_MARKER', identity);
-    setField(metadata, 15);
+    eofMarker = getField(11);
+    getField(15);
   }
 
   /*
   Parse a FAM file.
   */
   function parse() {
-    var current_id = 0,
-        index;
+    var index;
 
     parseHeader();
 
-    while (current_id !== metadata.LAST_ID) {
-      current_id = parseMember();
-    }
+    while (parseMember() !== lastId);
 
     parseFooter();
 
-    if (metadata.EOF_MARKER !== EOF_MARKER) {
+    if (eofMarker !== EOF_MARKER) {
       throw 'No EOF marker found.';
     }
   }
@@ -521,63 +636,17 @@ function FamParser(fileContent) {
   Write the parsed FAM file to the console.
   */
   this.dump = function() {
-    var index,
-        key;
-
-    console.log('--- METADATA ---\n');
-    console.log(metadata);
-
-    for (index = 0; index < members.length; index++) {
-      console.log('\n\n--- MEMBER ---\n');
-      console.log(members[index]);
-    }
-
-    for (key in relationships) {
-      console.log('\n\n--- RELATIONSHIP ---\n');
-      console.log(relationships[key]);
-    }
-
-    /*
-    for (index = 0; index < crossovers.length; index++) {
-      console.log('\n\n--- CROSSOVER ---\n');
-      console.log(crossovers[index]);
-    }
-    */
-
-    for (index = 0; index < texts.length; index++) {
-      console.log('\n\n--- TEXT ---\n');
-      console.log(texts[index]);
-    }
+    console.log('--- YAML DUMP ---');
+    console.log(toYaml(parsed));
+    console.log('\n--- DEBUG INFO ---\n');
+    console.log('EOF_MARKER: ' + eofMarker);
   };
 
   /*
-  Get metadata object.
+  Get parsed object.
   */
-  this.getMetadata = function() {
-    return metadata;
-  };
-
-  /*
-  Get an array of member objects.
-  */
-  this.getMembers = function() {
-    return members;
-  };
-
-  /*
-  Get an array of relationship objects.
-  */
-  this.getRelationships = function() {
-    return Object.keys(relationships).map(function(key) {
-      return relationships[key];
-    });
-  };
-
-  /*
-  Get an array of text objects.
-  */
-  this.getTexts = function() {
-    return texts;
+  this.getParsed = function() {
+    return parsed;
   };
 
   parse();
