@@ -397,10 +397,7 @@ class FamParser(object):
         :arg int person_id: The partner in this relationship.
         """
         relationship = {
-            'MEMBERS': sorted([
-                {'ID': person_id},
-                {'ID': _int(self._get_field(2))}
-            ])
+            'MEMBERS': sorted([person_id, _int(self._get_field(2))])
         }
 
         relationship.update(_flags(self._get_field(1), 'RELATIONSHIP'))

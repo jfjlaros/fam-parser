@@ -8,7 +8,7 @@ FAM parser.
 // NOTE: All integers are probably 2 bytes.
 // NOTE: Colours may be 4 bytes.
 
-var toYaml = require('./yaml');
+var yaml = require('js-yaml');
 
 var EOF_MARKER = 'End of File',
     MAPS = {
@@ -407,20 +407,15 @@ function FamParser(fileContent) {
   :arg int personId: The partner in this relationship.
   */
   function parseRelationship(personId) {
-    var relationship = {
-          'MEMBERS': [
-            {'ID': personId},
-            {'ID': integer(getField(2))}
-          ].sort()
-        },
+    var relationship = {'MEMBERS': [personId, integer(getField(2))].sort(
+          function(a,b) {return a - b;})},
         key;
 
     update(relationship, flags(getField(1), 'RELATIONSHIP'));
 
     relationship['RELATION_NAME'] = getField();
 
-    key = [relationship['MEMBERS'][0].ID,
-      relationship['MEMBERS'][1].ID].toString();
+    key = relationship['MEMBERS'].toString();
     if (relationshipKeys[key] === undefined) {
       parsed['FAMILY']['RELATIONSHIPS'].push(relationship);
       relationshipKeys[key] = true;
@@ -637,7 +632,7 @@ function FamParser(fileContent) {
   */
   this.dump = function() {
     console.log('--- YAML DUMP ---');
-    console.log(toYaml(parsed));
+    console.log(yaml.dump(parsed));
     console.log('\n--- DEBUG INFO ---\n');
     console.log('EOF_MARKER: ' + eofMarker);
   };
