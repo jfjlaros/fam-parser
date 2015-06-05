@@ -8,108 +8,8 @@ FAM parser.
 // NOTE: All integers are probably 2 bytes.
 // NOTE: Colours may be 4 bytes.
 
-var yaml = require('js-yaml');
-
-var EOF_MARKER = 'End of File',
-    MAPS = {
-      'PROBAND': {
-        0x00: 'NOT_A_PROBAND',
-        0x01: 'ABOVE_LEFT',
-        0x02: 'ABOVE_RIGHT',
-        0x03: 'BELOW_LEFT',
-        0x04: 'BELOW_RIGHT',
-        0x05: 'LEFT',
-        0x06: 'RIGHT'
-      },
-      'SEX': {
-        0x00: 'MALE',
-        0x01: 'FEMALE',
-        0x02: 'UNKNOWN'
-      },
-      'MULTIPLE_PREGNANCIES': {
-        0x00: 'SINGLETON',
-        0x01: 'MONOZYGOUS_TWINS',
-        0x02: 'DIZYGOUS_TWINS',
-        0x03: 'TWIN_TYPE_UNKNOWN',
-        0x04: 'TRIPLET',
-        0x05: 'QUADRUPLET',
-        0x06: 'QUINTUPLET',
-        0x07: 'SEXTUPLET'
-      },
-      'ADOPTION_TYPE': {
-        0x00: 'ADOPTED_INTO_FAMILY',
-        0x01: 'NOT_ADOPTED',
-        0x02: 'POSSIBLY_ADOPTED_INTO_FAMILY',
-        0x03: 'ADOPTED_OUT_OF_FAMILY'
-      },
-      'ANNOTATION_1': {
-        0x00: 'NONE',
-        0x01: 'P',
-        0x02: 'SAB',
-        0x03: 'TOP',
-        0x04: 'SB',
-        0x0b: 'BAR'
-      },
-      'ANNOTATION_2': {
-        0x00: 'NONE',
-        0x01: 'AFFECTED'
-      },
-      'PATTERN': {
-        0x00: 'HORIZONTAL',
-        0x01: 'VERTICAL',
-        0x02: 'SLANTED_BACK',
-        0x03: 'SLANTED_FORWARD',
-        0x04: 'GRID',
-        0x05: 'DIAGONAL_GRID',
-        0xff: 'FILL'
-      },
-      'GENETIC_SYMBOL': {
-        0x00: 'CLEAR',
-        0x01: 'UNAFFECTED',
-        0x02: 'AFFECTED',
-        0x03: 'CARRIER',
-        0x04: 'POSSIBLY_AFFECTED',
-        0x05: 'Q1',
-        0x06: 'Q2',
-        0x07: 'Q3',
-        0x08: 'Q4',
-        0x09: 'HETEROZYGOUS',
-        0x0a: 'Q1_Q3',
-        0x0b: 'Q1_Q4',
-        0x0c: 'Q2_Q3',
-        0x0d: 'Q2_Q4',
-        0x0e: 'Q3_Q4',
-        0x0f: 'Q1_Q2_Q3',
-        0x10: 'Q1_Q2_Q4',
-        0x11: 'Q1_Q3_Q4',
-        0x12: 'Q2_Q3_Q4'
-      },
-      'ADDITIONAL_SYMBOL': {
-        0X00: 'CROSS',
-        0X01: 'PLUS',
-        0X02: 'MINUS',
-        0X03: 'O'
-      }
-    },
-    FLAGS = {
-      'INDIVIDUAL': {
-        0x01: 'BLOOD',
-        0x02: 'DNA',
-        0x04: 'LOOP_BREAKPOINT',
-        0x08: 'HIDE_INFO',
-        0x10: 'COMMITTED_SUICIDE',
-        0x20: 'CELLS'
-      },
-      'RELATIONSHIP': {
-        0x01: 'INFORMAL',
-        0x02: 'CONSANGUINEOUS',
-        0x04: 'SEPARATED',
-        0x08: 'DIVORCED'
-      },
-      'SAMPLE': {
-        0x01: 'SAMPLE_REQUIRED'
-      }
-    };
+var yaml = require('js-yaml'),
+    requireFile = require('require-file');
 
 /*
 Miscellaneous functions.
@@ -253,50 +153,6 @@ function date(data) {
 }
 
 /*
-Replace a value with its annotation.
-
-:arg str data: Encoded data.
-:arg dict annotation: Annotation of {data}.
-
-:return str: Annotated representation of {data}.
-*/
-function annotate(data, annotation) {
-  var index = ord(data);
-
-  if (index in MAPS[annotation]) {
-    return MAPS[annotation][index];
-  }
-  return convertToHex(data);
-}
-
-/*
-Explode a bitfield into flags.
-
-:arg int data: Bit field.
-:arg str annotation: Annotation of {data}.
-*/
-function flags(data, annotation) {
-  var bitfield = integer(data),
-      destination = {},
-      flag,
-      value;
-
-  for (flag = 0x01; flag < 0x100; flag <<= 1) {
-    value = Boolean(flag & bitfield);
-
-    if (!(flag in FLAGS[annotation])) {
-      if (value) {
-        destination['FLAGS_' + annotation + '_' + pad(hex(flag), 2)] = value;
-      }
-    }
-    else {
-      destination[FLAGS[annotation][flag]] = value;
-    }
-  }
-  return destination;
-}
-
-/*
 FAM file parsing.
 */
 function FamParser(fileContent) {
@@ -314,7 +170,10 @@ function FamParser(fileContent) {
         },
         'TEXT_FIELDS': []
       },
-      delimiter = 0x0d,
+      delimiter = 0x0d, // REMOVE
+
+      definitions = yaml.load(requireFile('../fam_fields.yml')),
+
       eofMarker = '',
       lastId = 0,
       offset = 0,
@@ -342,6 +201,50 @@ function FamParser(fileContent) {
 
     offset += extracted;
     return field;
+  }
+
+  /*
+  Replace a value with its annotation.
+
+  :arg str data: Encoded data.
+  :arg dict annotation: Annotation of {data}.
+
+  :return str: Annotated representation of {data}.
+  */
+  function annotate(data, annotation) {
+    var index = ord(data);
+
+    if (index in definitions.MAPS[annotation]) {
+      return definitions.MAPS[annotation][index];
+    }
+    return convertToHex(data);
+  }
+
+  /*
+  Explode a bitfield into flags.
+
+  :arg int data: Bit field.
+  :arg str annotation: Annotation of {data}.
+  */
+  function flags(data, annotation) {
+    var bitfield = integer(data),
+        destination = {},
+        flag,
+        value;
+
+    for (flag = 0x01; flag < 0x100; flag <<= 1) {
+      value = Boolean(flag & bitfield);
+
+      if (!(flag in definitions.FLAGS[annotation])) {
+        if (value) {
+          destination['FLAGS_' + annotation + '_' + pad(hex(flag), 2)] = value;
+        }
+      }
+      else {
+        destination[definitions.FLAGS[annotation][flag]] = value;
+      }
+    }
+    return destination;
   }
 
   /*
@@ -574,14 +477,14 @@ function FamParser(fileContent) {
 
     for (index = 0; index < 19; index++) {
       parsed['METADATA']['GENETIC_SYMBOLS'].push({
-        'NAME': MAPS['GENETIC_SYMBOL'][index],
+        'NAME': definitions.MAPS['GENETIC_SYMBOL'][index],
         'VALUE': getField()
       });
     }
 
     for (index = 0; index < 4; index++) {
       parsed['METADATA']['ADDITIONAL_SYMBOLS'].push({
-        'NAME': MAPS['ADDITIONAL_SYMBOL'][index],
+        'NAME': definitions.MAPS['ADDITIONAL_SYMBOL'][index],
         'VALUE': getField()
       });
     }
@@ -622,7 +525,7 @@ function FamParser(fileContent) {
 
     parseFooter();
 
-    if (eofMarker !== EOF_MARKER) {
+    if (eofMarker !== definitions.EOF_MARKER) {
       throw 'No EOF marker found.';
     }
   }
