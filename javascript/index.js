@@ -77,27 +77,8 @@ function update(target, source) {
 Helper functions.
 */
 
-function trim(data) {
-  return data.split(String.fromCharCode(0x00))[0];
-}
-
 function raw(data) {
   return convertToHex(data);
-}
-
-function comment(data) {
-  return data.split(String.fromCharCode(0x09) +
-    String.fromCharCode(0x03)).join('\n');
-}
-
-function info(data) {
-  return data.split(String.fromCharCode(0xe9) +
-    String.fromCharCode(0xe9)).join('\n');
-}
-
-function freeText(data) {
-  return data.split(String.fromCharCode(0x0b) +
-    String.fromCharCode(0x0b)).join('\n');
 }
 
 /*
@@ -166,10 +147,7 @@ function FamParser(fileContent) {
         },
         'TEXT_FIELDS': []
       },
-      delimiter = 0x0d, // REMOVE
-
       definitions = yaml.load(requireFile('../fam_fields.yml')),
-
       eofMarker = '',
       lastId = 0,
       offset = 0,
@@ -191,12 +169,23 @@ function FamParser(fileContent) {
       extracted = size;
     }
     else {
-      field = data.slice(offset, -1).split(String.fromCharCode(delimiter))[0];
+      field = data.slice(offset, -1).split(
+        String.fromCharCode(definitions.DELIMITERS.FIELD))[0];
       extracted = field.length + 1;
     }
 
     offset += extracted;
     return field;
+  }
+
+  function trim(data) {
+    return data.split(String.fromCharCode(definitions.DELIMITERS.TRIM))[0];
+  }
+
+  function text(data, delimiters) {
+    return data.split(
+      String.fromCharCode(definitions.DELIMITERS[delimiters][0]) +
+      String.fromCharCode(definitions.DELIMITERS[delimiters][1])).join('\n');
   }
 
   /*
@@ -284,7 +273,7 @@ function FamParser(fileContent) {
       parseDiseaseLocus();
     }
 
-    parsed['FAMILY']['COMMENTS'] = getField();
+    parsed['FAMILY']['COMMENTS'] = text(getField(), 'COMMENT');
     parsed['METADATA']['CREATION_DATE'] = date(getField(4));
     parsed['METADATA']['LAST_UPDATED'] = date(getField(4));
 
@@ -358,7 +347,7 @@ function FamParser(fileContent) {
             'P_G_FATHER': getField()
           },
           'ADDRESS': getField(),
-          'ADDITIONAL_INFORMATION': info(getField()),
+          'ADDITIONAL_INFORMATION': text(getField(), 'COMMENT'),
           'DATE_OF_BIRTH': date(getField(4)),
           'DATE_OF_DEATH': date(getField(4)),
           'SEX': annotate(getField(1), 'SEX'),
@@ -441,16 +430,16 @@ function FamParser(fileContent) {
   */
   function parseText() {
     // TODO: X and Y coordinates have more digits.
-    var text = {};
+    var textField = {};
 
-    text['CONTENT'] = freeText(getField());
+    textField['CONTENT'] = text(getField(), 'TEXT');
     getField(54);
-    text['X_COORDINATE'] = integer(getField(1));
+    textField['X_COORDINATE'] = integer(getField(1));
     getField(3);
-    text['Y_COORDINATE'] = integer(getField(1));
+    textField['Y_COORDINATE'] = integer(getField(1));
     getField(7);
 
-    parsed['TEXT_FIELDS'].push(text);
+    parsed['TEXT_FIELDS'].push(textField);
   }
 
   /*
