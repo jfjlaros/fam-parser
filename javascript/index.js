@@ -28,8 +28,8 @@ var EOF_MARKER = 'End of File',
       },
       'MULTIPLE_PREGNANCIES': {
         0x00: 'SINGLETON',
-        0x01: 'MONOZYGOUS_TWINS',
-        0x02: 'DIZYGOUS_TWINS',
+        0x01: 'MONOZYGOTIC',
+        0x02: 'DIZYGOTIC_TWINS',
         0x03: 'TWIN_TYPE_UNKNOWN',
         0x04: 'TRIPLET',
         0x05: 'QUADRUPLET',
@@ -227,7 +227,7 @@ function integer(data) {
 }
 
 function colour(data) {
-  return '0x' + pad(hex(integer(data), 6));
+  return '0x' + pad(hex(integer(data)), 6);
 }
 
 /*
@@ -595,8 +595,8 @@ function FamParser(fileContent) {
 
     getField(14);
     parsed['METADATA']['ZOOM'] = integer(getField(2));
-    parsed['METADATA']['UNKNOWN_1'] = raw(getField(4)); // Zoom.
-    parsed['METADATA']['UNKNOWN_2'] = raw(getField(4)); // Zoom.
+    getField(4); // Zoom.
+    getField(4); // Zoom.
     getField(20);
 
     numberOfTextFields = integer(getField(1));

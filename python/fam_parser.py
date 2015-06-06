@@ -617,8 +617,8 @@ class FamParser(object):
         if self._json_output == True:
             if self._debug:
                 output_handle.write('--- JSON DUMP ---\n\n')
-            output_handle.write(json.dumps(self.parsed, sort_keys=True,
-                indent=4, separators=(',', ': ')))
+            output_handle.write(json.dumps(self.parsed, indent=4,
+                separators=(',', ': ')))
             output_handle.write('\n')
         else:
             if self._debug:
