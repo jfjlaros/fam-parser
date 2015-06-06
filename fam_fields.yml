@@ -1,5 +1,4 @@
 ---
-EOF_MARKER: End of File
 MAPS:
   PROBAND:
     0x00: NOT_A_PROBAND
@@ -96,3 +95,4 @@ DELIMITERS:
   TEXT:
     - 0x0b
     - 0x0b
+EOF_MARKER: End of File

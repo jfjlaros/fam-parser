@@ -100,10 +100,6 @@ function freeText(data) {
     String.fromCharCode(0x0b)).join('\n');
 }
 
-function description(data) {
-  return DESC_PREFIX + pad(ord(data), 2);
-}
-
 /*
 Decode a little-endian encoded integer.
 
