@@ -129,13 +129,12 @@ class FamParser(object):
         self._relationship_keys = set([])
 
 
-    def _get_field(self, size=0, delimiter=chr(0x0d)):
+    def _get_field(self, size=0):
         """
         Extract a field from {self.data} using either a fixed size, or a
         delimiter. After reading, {self._offset} is set to the next field.
 
         :arg int size: Size of fixed size field.
-        :arg str delimiter: Delimeter for variable size field.
 
         :return str: Content of the requested field.
         """
@@ -143,7 +142,8 @@ class FamParser(object):
             field = self.data[self._offset:self._offset + size]
             extracted = size
         else:
-            field = self.data[self._offset:].split(delimiter)[0]
+            field = self.data[self._offset:].split(
+                chr(self._definitions['DELIMITERS']['FIELD']))[0]
             extracted = len(field) + 1
 
         if self._debug > 1:
@@ -269,7 +269,8 @@ class FamParser(object):
         for i in range(7):
             self._parse_disease_locus()
 
-        self.parsed['FAMILY']['COMMENTS'] = self._get_field()
+        self.parsed['FAMILY']['COMMENTS'] = self._text(self._get_field(),
+            'COMMENT')
         self.parsed['METADATA']['CREATION_DATE'] = _date(self._get_field(4))
         self.parsed['METADATA']['LAST_UPDATED'] = _date(self._get_field(4))
 
