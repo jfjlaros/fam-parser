@@ -2,6 +2,14 @@ import os
 from setuptools import setup
 import sys
 
+requires = ['pyyaml']
+
+# Python 2.6 does not include the argparse module.
+try:
+    import argparse
+except ImportError:
+    requires.append('argparse')
+
 # This is quite the hack, but we don't want to import our package from here
 # since that's recipe for disaster (it might have some uninstalled
 # dependencies, or we might import another already installed version).
@@ -35,6 +43,7 @@ setup(
     license='MIT License',
     platforms=['any'],
     packages=['fam_parser'],
+    install_requires=requires,
     package_dir={'fam_parser': 'python'},
     entry_points={
         'console_scripts': ['fam_parser = fam_parser.fam_parser:main']

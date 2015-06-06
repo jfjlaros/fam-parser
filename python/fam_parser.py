@@ -9,116 +9,10 @@ FAM parser.
 
 import argparse
 import json
+import os
 import sys
+
 import yaml
-
-
-EOF_MARKER = 'End of File'
-
-MAPS = {
-    'PROBAND': {
-        0x00: 'NOT_A_PROBAND',
-        0x01: 'ABOVE_LEFT',
-        0x02: 'ABOVE_RIGHT',
-        0x03: 'BELOW_LEFT',
-        0x04: 'BELOW_RIGHT',
-        0x05: 'LEFT',
-        0x06: 'RIGHT'
-    },
-    'SEX': {
-        0x00: 'MALE',
-        0x01: 'FEMALE',
-        0x02: 'UNKNOWN'
-    },
-    'MULTIPLE_PREGNANCIES': {
-        0x00: 'SINGLETON',
-        0x01: 'MONOZYGOTIC_TWINS',
-        0x02: 'DIZYGOTIC_TWINS',
-        0x03: 'TWIN_TYPE_UNKNOWN',
-        0x04: 'TRIPLET',
-        0x05: 'QUADRUPLET',
-        0x06: 'QUINTUPLET',
-        0x07: 'SEXTUPLET'
-    },
-    'ADOPTION_TYPE': {
-        0x00: 'ADOPTED_INTO_FAMILY',
-        0x01: 'NOT_ADOPTED',
-        0x02: 'POSSIBLY_ADOPTED_INTO_FAMILY',
-        0x03: 'ADOPTED_OUT_OF_FAMILY'
-    },
-    'ANNOTATION_1': {
-        0x00: 'NONE',
-        0x01: 'P',
-        0x02: 'SAB',
-        0x03: 'TOP',
-        0x04: 'SB',
-        0x0b: 'BAR'
-    },
-    'ANNOTATION_2': {
-        0x00: 'NONE',
-        0x01: 'AFFECTED'
-    },
-    'PATTERN': {
-        0x00: 'HORIZONTAL',
-        0x01: 'VERTICAL',
-        0x02: 'SLANTED_BACK',
-        0x03: 'SLANTED_FORWARD',
-        0x04: 'GRID',
-        0x05: 'DIAGONAL_GRID',
-        0xff: 'FILL'
-    },
-    'GENETIC_SYMBOL': {
-        0x00: 'CLEAR',
-        0x01: 'UNAFFECTED',
-        0x02: 'AFFECTED',
-        0x03: 'CARRIER',
-        0x04: 'POSSIBLY_AFFECTED',
-        0x05: 'Q1',
-        0x06: 'Q2',
-        0x07: 'Q3',
-        0x08: 'Q4',
-        0x09: 'HETEROZYGOUS',
-        0x0a: 'Q1_Q3',
-        0x0b: 'Q1_Q4',
-        0x0c: 'Q2_Q3',
-        0x0d: 'Q2_Q4',
-        0x0e: 'Q3_Q4',
-        0x0f: 'Q1_Q2_Q3',
-        0x10: 'Q1_Q2_Q4',
-        0x11: 'Q1_Q3_Q4',
-        0x12: 'Q2_Q3_Q4'
-    },
-    'ADDITIONAL_SYMBOL': {
-        0X00: 'CROSS',
-        0X01: 'PLUS',
-        0X02: 'MINUS',
-        0X03: 'O'
-    }
-}
-
-FLAGS = {
-    'INDIVIDUAL': {
-        0x01: 'BLOOD',
-        0x02: 'DNA',
-        0x04: 'LOOP_BREAKPOINT',
-        0x08: 'HIDE_INFO',
-        0x10: 'COMMITTED_SUICIDE',
-        0x20: 'CELLS'
-    },
-    'RELATIONSHIP': {
-        0x01: 'INFORMAL',
-        0x02: 'CONSANGUINEOUS',
-        0x04: 'SEPARATED',
-        0x08: 'DIVORCED'
-    },
-    'SAMPLE': {
-        0x01: 'SAMPLE_REQUIRED'
-    }
-}
-
-
-def _trim(data, delimiter=chr(0x00)):
-    return data.split(delimiter)[0]
 
 
 def _raw(data):
@@ -135,18 +29,6 @@ def _raw(data):
 
 def _bit(data):
     return '{:08b}'.format(ord(data))
-
-
-def _comment(data):
-    return '\n'.join(data.split(chr(0x09) + chr(0x03)))
-
-
-def _info(data):
-    return '\n'.join(data.split(chr(0xe9) + chr(0xe9)))
-
-
-def _text(data):
-    return '\n'.join(data.split(chr(0x0b) + chr(0x0b)))
 
 
 def _int(data):
@@ -187,46 +69,6 @@ def _date(data):
             return 'DEFINED'
         return str(date_int)
     return 'UNKNOWN'
-
-
-def _annotate(data, annotation):
-    """
-    Replace a value with its annotation.
-
-    :arg str data: Encoded data.
-    :arg dict annotation: Annotation of {data}.
-
-    :return str: Annotated representation of {data}.
-    """
-    index = ord(data)
-
-    if index in MAPS[annotation]:
-        return MAPS[annotation][index]
-    return '{:02x}'.format(index)
-
-
-def _flags(data, annotation):
-    """
-    Explode a bitfield into flags.
-
-    :arg int data: Bit field.
-    :arg str annotation: Annotation of {data}.
-
-    :return dict: Dictionary of flags and their values.
-    """
-    bitfield = _int(data)
-    destination = {}
-
-    for flag in map(lambda x: 2 ** x, range(8)):
-        value = bool(flag & bitfield)
-
-        if flag not in FLAGS[annotation]:
-            if value:
-                destination['FLAGS_{}_{:02x}'.format(annotation, flag)] = value
-        else:
-            destination[FLAGS[annotation][flag]] = value
-
-    return destination
 
 
 def _block_write(string, block_size, stream=sys.stdout):
@@ -277,6 +119,9 @@ class FamParser(object):
         self._experimental = experimental | bool(debug)
         self._log = log
 
+        self._definitions = yaml.load(open(
+            os.path.join(os.path.dirname(__file__), '../fam_fields.yml')))
+
         self._eof_marker = ''
         self._last_id = 0
         self._offset = 0
@@ -310,6 +155,56 @@ class FamParser(object):
 
         self._offset += extracted
         return field
+
+
+    def _trim(self, data):
+        return data.split(chr(self._definitions['DELIMITERS']['TRIM']))[0]
+
+
+    def _text(self, data, delimiters):
+        return '\n'.join(data.split(
+            chr(self._definitions['DELIMITERS'][delimiters][0]) +
+            chr(self._definitions['DELIMITERS'][delimiters][1])))
+
+
+    def _annotate(self, data, annotation):
+        """
+        Replace a value with its annotation.
+
+        :arg str data: Encoded data.
+        :arg dict annotation: Annotation of {data}.
+
+        :return str: Annotated representation of {data}.
+        """
+        index = ord(data)
+
+        if index in self._definitions['MAPS'][annotation]:
+            return self._definitions['MAPS'][annotation][index]
+        return '{:02x}'.format(index)
+
+
+    def _flags(self, data, annotation):
+        """
+        Explode a bitfield into flags.
+
+        :arg int data: Bit field.
+        :arg str annotation: Annotation of {data}.
+
+        :return dict: Dictionary of flags and their values.
+        """
+        bitfield = _int(data)
+        flags = {}
+
+        for flag in map(lambda x: 2 ** x, range(8)):
+            value = bool(flag & bitfield)
+
+            if flag not in self._definitions['FLAGS'][annotation]:
+                if value:
+                    flags['FLAGS_{}_{:02x}'.format(annotation, flag)] = value
+            else:
+                flags[self._definitions['FLAGS'][annotation][flag]] = value
+
+        return flags
 
 
     def _parse_raw(self, destination, size, key='RAW'):
@@ -355,7 +250,7 @@ class FamParser(object):
         }
 
         self._parse_raw(locus, 1)
-        locus['PATTERN'] = _annotate(self._get_field(1), 'PATTERN')
+        locus['PATTERN'] = self._annotate(self._get_field(1), 'PATTERN')
 
         self.parsed['FAMILY']['DISEASE_LOCI'].append(locus)
 
@@ -364,7 +259,7 @@ class FamParser(object):
         """
         Extract header information.
         """
-        self.parsed['METADATA']['SOURCE'] = _trim(self._get_field(26))
+        self.parsed['METADATA']['SOURCE'] = self._trim(self._get_field(26))
         self.parsed['FAMILY']['NAME'] = self._get_field()
         self.parsed['FAMILY']['ID_NUMBER'] = self._get_field()
         self.parsed['METADATA']['FAMILY_DRAWN_BY'] = self._get_field()
@@ -400,7 +295,7 @@ class FamParser(object):
             'MEMBERS': sorted([person_id, _int(self._get_field(2))])
         }
 
-        relationship.update(_flags(self._get_field(1), 'RELATIONSHIP'))
+        relationship.update(self._flags(self._get_field(1), 'RELATIONSHIP'))
 
         relationship['RELATION_NAME'] = self._get_field()
 
@@ -453,10 +348,10 @@ class FamParser(object):
                 'P_G_FATHER': self._get_field()
             },
             'ADDRESS': self._get_field(),
-            'ADDITIONAL_INFORMATION': _info(self._get_field()),
+            'ADDITIONAL_INFORMATION': self._text(self._get_field(), 'COMMENT'),
             'DATE_OF_BIRTH': _date(self._get_field(4)),
             'DATE_OF_DEATH': _date(self._get_field(4)),
-            'SEX': _annotate(self._get_field(1), 'SEX'),
+            'SEX': self._annotate(self._get_field(1), 'SEX'),
             'ID': _int(self._get_field(2)),
             'PEDIGREE_NUMBER': _int(self._get_field(2)),
             'MOTHER_ID': _int(self._get_field(2)),
@@ -475,19 +370,20 @@ class FamParser(object):
         member.update({
             'TWIN_ID': _int(self._get_field(2)),
             'COMMENT': self._get_field(),
-            'ADOPTION_TYPE': _annotate(self._get_field(1), 'ADOPTION_TYPE'),
+            'ADOPTION_TYPE': self._annotate(self._get_field(1),
+                'ADOPTION_TYPE'),
             'GENETIC_SYMBOLS': _int(self._get_field(1))
         })
         self._parse_raw(member, 1)
 
-        member.update(_flags(self._get_field(1), 'INDIVIDUAL'))
+        member.update(self._flags(self._get_field(1), 'INDIVIDUAL'))
 
         member.update({
-            'PROBAND': _annotate(self._get_field(1), 'PROBAND'),
+            'PROBAND': self._annotate(self._get_field(1), 'PROBAND'),
             'X_COORDINATE': _int(self._get_field(2)),
             'Y_COORDINATE': _int(self._get_field(2)),
-            'ANNOTATION_1': _annotate(self._get_field(1), 'ANNOTATION_1'),
-            'MULTIPLE_PREGNANCIES': _annotate(self._get_field(1),
+            'ANNOTATION_1': self._annotate(self._get_field(1), 'ANNOTATION_1'),
+            'MULTIPLE_PREGNANCIES': self._annotate(self._get_field(1),
                 'MULTIPLE_PREGNANCIES')
         })
         self._parse_raw(member, 3)
@@ -496,7 +392,8 @@ class FamParser(object):
         self._parse_raw(member['CROSSOVER'], 2)
         member['CROSSOVER']['ALLELES'].append(self._parse_chromosome())
 
-        member['ANNOTATION_2'] = _annotate(self._get_field(1), 'ANNOTATION_2')
+        member['ANNOTATION_2'] = self._annotate(self._get_field(1),
+            'ANNOTATION_2')
 
         self._parse_raw(member, 12)
         for i in range(7):
@@ -514,7 +411,7 @@ class FamParser(object):
         if member['CELLS']:
             member['CELLS_LOCATION'] = self._get_field()
 
-        member.update(_flags(self._get_field(1), 'SAMPLE'))
+        member.update(self._flags(self._get_field(1), 'SAMPLE'))
 
         member['SAMPLE_NUMBER'] = self._get_field()
         self._parse_raw(member, 3)  # COLOUR
@@ -533,7 +430,7 @@ class FamParser(object):
         # TODO: X and Y coordinates have more digits.
         text = {}
 
-        text['CONTENT'] = _text(self._get_field())
+        text['CONTENT'] = self._text(self._get_field(), 'TEXT')
         self._parse_raw(text, 54)
         text['X_COORDINATE'] = _int(self._get_field(1))
         self._parse_raw(text, 3)
@@ -558,12 +455,14 @@ class FamParser(object):
 
         for description in range(19):
             self.parsed['METADATA']['GENETIC_SYMBOLS'].append({
-                'NAME': MAPS['GENETIC_SYMBOL'][description],
+                'NAME': self._definitions['MAPS']['GENETIC_SYMBOL'][
+                    description],
                 'VALUE': self._get_field()})
 
         for description in range(4):
             self.parsed['METADATA']['ADDITIONAL_SYMBOLS'].append({
-                'NAME': MAPS['ADDITIONAL_SYMBOL'][description],
+                'NAME': self._definitions['MAPS']['ADDITIONAL_SYMBOL'][
+                    description],
                 'VALUE': self._get_field()})
 
         for description in range(number_of_custom_descriptions):
@@ -601,7 +500,7 @@ class FamParser(object):
 
         self._parse_footer()
 
-        if self._eof_marker != EOF_MARKER:
+        if self._eof_marker != self._definitions['EOF_MARKER']:
             raise Exception('No EOF marker found.')
 
 

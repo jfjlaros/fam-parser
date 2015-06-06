@@ -21,5 +21,8 @@
     "name": "Jeroen F.J. Laros",
     "email": "J.F.J.Laros@lumc.nl"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "js-yaml": "^3.3.1"
+  }
 }
