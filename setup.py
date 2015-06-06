@@ -40,6 +40,7 @@ setup(
     author=distmeta['__author__'],
     author_email=distmeta['__contact__'],
     url=distmeta['__homepage__'],
+    data_files=['fam_fields.yml'],
     license='MIT License',
     platforms=['any'],
     packages=['fam_parser'],
