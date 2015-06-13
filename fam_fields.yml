@@ -90,10 +90,9 @@ DELIMITERS:
   COMMENT:
     - 0x09
     - 0x03
-  INFO:
-    - 0xe9
-    - 0xe9
   TEXT:
     - 0x0b
     - 0x0b
+  MARKER: 0x01
+  CROSSOVER: 0x22
 EOF_MARKER: End of File

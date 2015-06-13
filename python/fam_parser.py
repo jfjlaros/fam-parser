@@ -15,6 +15,10 @@ import sys
 import yaml
 
 
+def _identity(data):
+    return data
+
+
 def _raw(data):
     """
     Return the input data in hexadecimal, grouped by bit.
@@ -113,6 +117,7 @@ class FamParser(object):
             },
             'TEXT_FIELDS': []
         }
+        self._internal = {}
 
         self._json_output = json_output
         self._debug = debug
@@ -121,6 +126,7 @@ class FamParser(object):
 
         self._definitions = yaml.load(open(
             os.path.join(os.path.dirname(__file__), '../fam_fields.yml')))
+        self._fields = self._definitions
 
         self._eof_marker = ''
         self._last_id = 0
@@ -230,6 +236,77 @@ class FamParser(object):
             self._get_field(size)
 
         self._raw_byte_count += size
+
+
+    def parse(self, structure, dest):
+        """
+        """
+        for item in structure:
+            if 'structure' in item:
+                if self._debug > 1:
+                    print '{}'.format(item['name'])
+                if item['name'] not in dest:
+                    if set(['size', 'delimiter', 'count']) & set(item):
+                        dest[item['name']] = []
+                    else:
+                        dest[item['name']] = {}
+                if 'size' in item:
+                    for index in range(item['size']):
+                        d = {}
+                        self.parse(item['structure'], d)
+                        dest[item['name']].append(d)
+                elif 'delimiter' in item:
+                    while (_int(self._get_field(1)) !=
+                            self._fields['DELIMITERS'][item['delimiter']]):
+                        d = {}
+                        self.parse(item['structure'], d)
+                        dest[item['name']].append(d)
+                elif 'count' in item:
+                    for index in range(self._internal[item['count']]):
+                        d = {}
+                        self.parse(item['structure'], d)
+                        dest[item['name']].append(d)
+                else:
+                    self.parse(item['structure'], dest[item['name']])
+            else:
+                size = 0
+                function = _identity
+                if 'size' in item:
+                    size = item['size']
+                if 'type' in item:
+                    if item['type'] == 'trim':
+                        dest[item['name']] = self._trim(self._get_field(size))
+                    elif item['type'] == 'raw':
+                        dest[item['name']] = _raw(self._get_field(size))
+                    elif item['type'] == 'int':
+                        if 'internal' in item:
+                            self._internal[item['name']] = _int(
+                                self._get_field(2))
+                        else:
+                            dest[item['name']] = _int(self._get_field(2))
+                    elif item['type'] == 'short':
+                        dest[item['name']] = _int(self._get_field(1))
+                    elif item['type'] == 'date':
+                        dest[item['name']] = _date(self._get_field(4))
+                    elif item['type'] == 'colour':
+                        dest[item['name']] = _colour(self._get_field(3))
+                    elif item['type'] == 'map':
+                        dest[item['name']] = self._annotate(self._get_field(1),
+                            item['map'])
+                    elif item['type'] == 'flags':
+                        dest[item['name']] = self._flags(self._get_field(1),
+                            item['flags'])
+                    elif item['type'] == 'text':
+                        dest[item['name']] = self._text(self._get_field(),
+                            item['split'])
+                    elif item['type'] == 'conditional':
+                        if item['condition'] in dest:
+                            dest[item['name']] = _identity(
+                                self._get_field(size))
+                else:
+                    dest[item['name']] = _identity(self._get_field(size))
+                if self._debug > 1:
+                    print '{}'.format(item['name'])
 
 
     def _parse_markers(self):
@@ -492,7 +569,12 @@ class FamParser(object):
 
         :arg stream input_handle: Open readable handle to a FAM file.
         """
+
         self.data = input_handle.read()
+
+        structure = yaml.load(open('structure.yml'))
+        self.parse(structure, self.parsed)
+        return
 
         self._parse_header()
 

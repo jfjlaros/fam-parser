@@ -1,0 +1,243 @@
+---
+- name: metadata
+  structure:
+    - name: source
+      type: trim
+      size: 26
+- name: family
+  structure:
+    - name: name
+    - name: id_number
+- name: metadata
+  structure:
+    - name: family_drawn_by
+    - name: last_id
+      type: int
+      internal: true
+    - name: unknown # last_internal_id
+      type: raw
+      size: 2
+- name: family
+  structure:
+    - name: disease_loci
+      size: 7
+      structure:
+        - name: name
+        - name: colour
+          type: colour
+        - name: unknown
+          type: raw
+          size: 1
+        - name: pattern
+          type: map
+          map: PATTERN
+    - name: comments
+      type: text
+      split: COMMENT
+- name: metadata
+  structure:
+    - name: creation_date
+      type: date
+    - name: last_updated
+      type: date
+    - name: unknown
+      type: raw
+      size: 5
+- name: family
+  structure:
+    - name: quantitative_value_loci
+      size: 7
+      structure:
+        - name: name
+- name: metadata
+  structure:
+    - name: selected_id
+      type: int
+    - name: unknown
+      type: raw
+      size: 7
+- name: family
+  structure:
+    - name: markers
+      delimiter: MARKER
+      structure:
+        - name: unknown
+          type: raw
+          size: 439
+- name: metadata
+  structure:
+    - name: unknown
+      type: raw
+      size: 9
+- name: members
+  count: last_id
+  structure:
+    - name: surname
+    - name: other_surnames
+    - name: forenames
+    - name: known_as
+    - name: maiden_name
+    - name: ethnicity
+      structure:
+        - name: self
+        - name: m_g_mother
+        - name: m_g_father
+        - name: p_g_mother
+        - name: p_g_father
+    - name: origins
+      structure:
+        - name: self
+        - name: m_g_mother
+        - name: m_g_father
+        - name: p_g_mother
+        - name: p_g_father
+    - name: address
+      type: text
+      split: COMMENT
+    - name: additional_information
+      type: text
+      split: COMMENT
+    - name: date_of_birth
+      type: date
+    - name: date_of_death
+      type: date
+    - name: sex
+      type: map
+      map: SEX
+    - name: id
+      type: int
+    - name: pedigree_number
+      type: int
+    - name: mother_id
+      type: int
+    - name: father_id
+      type: int
+    - name: internal_id # remove?
+      type: int
+    - name: number_of_individuals
+      type: int
+    - name: age_gestation
+    - name: individual_id
+    - name: number_of_spouses
+      type: int
+      internal: True
+    - name: spouses
+      count: number_of_spouses
+      structure:
+        - name: spouse_id
+          type: int
+        - name: flags
+          type: flags
+          flags: RELATIONSHIP
+        - name: name
+    - name: twin_id
+      type: int
+    - name: comment
+      type: text
+      split: COMMENT
+    - name: adoption_type
+      type: map
+      map: ADOPTION_TYPE
+    - name: genetic_symbols
+      type: short
+    - name: unknown
+      type: raw
+      size: 1
+    - name: flags
+      type: flags
+      flags: INDIVIDUAL
+    - name: proband
+      type: map
+      map: PROBAND
+    - name: x_coordinate
+      type: int
+    - name: y_coordinate
+      type: int
+    - name: annotation_1
+      type: map
+      map: ANNOTATION_1
+    - name: multiple_pregnancies
+      type: map
+      map: MULTIPLE_PREGNANCIES
+    - name: unknown
+      type: raw
+      size: 3
+    - name: crossover
+      structure:
+        - name: allele_1
+          structure:
+            - name: co
+              delimiter: CROSSOVER
+              structure:
+                - name: unknown
+                  type: raw
+                  size: 11
+        - name: unknown
+          type: raw
+          size: 9
+    - name: unknown1
+      type: raw
+      size: 2
+    - name: crossover
+      structure:
+        - name: allele_2
+          structure:
+            - name: co
+              delimiter: CROSSOVER
+              structure:
+                - name: unknown
+                  type: raw
+                  size: 11
+        - name: unknown
+          type: raw
+          size: 9
+    - name: unknown
+      type: raw
+      size: 12
+    - name: unknown_list
+      size: 7
+      structure:
+        - name: unknown
+          type: raw
+          size: 24
+    - name: annotation_2
+      type: map
+      map: ANNOTATION_2
+    - name: additional_symbols
+      type: short
+    - name: dna_location
+      type: conditional
+      condition: DNA
+    - name: blood_location
+      type: conditional
+      condition: BLOOD
+    - name: cells_location
+      type: conditional
+      condition: CELLS
+    - name: sample
+      type: flags
+      flags: SAMPLE
+    - name: sample_number
+    - name: unknown # colour
+      type: raw
+      size: 3
+    - name: unknown
+      type: raw
+      size: 17
+    - name: unknown # pattern
+      type: raw
+      size: 2
+- name: metadata
+  structure:
+    - name: number_of_unknown_data
+      type: int
+      internal: True
+    - name: unknown
+      type: raw
+      size: 1
+    - name: unknown_data
+      count: number_of_unknown_data
+      structure:
+        - name: unknown
+          type: raw
+          size: 12
