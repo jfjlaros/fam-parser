@@ -348,7 +348,7 @@ class FamParser(object):
                 'P_G_MOTHER': self._get_field(),
                 'P_G_FATHER': self._get_field()
             },
-            'ADDRESS': self._get_field(),
+            'ADDRESS': self._text(self._get_field(), 'COMMENT'),
             'ADDITIONAL_INFORMATION': self._text(self._get_field(), 'COMMENT'),
             'DATE_OF_BIRTH': _date(self._get_field(4)),
             'DATE_OF_DEATH': _date(self._get_field(4)),
@@ -370,7 +370,7 @@ class FamParser(object):
 
         member.update({
             'TWIN_ID': _int(self._get_field(2)),
-            'COMMENT': self._get_field(),
+            'COMMENT': self._text(self._get_field(), 'COMMENT'),
             'ADOPTION_TYPE': self._annotate(self._get_field(1),
                 'ADOPTION_TYPE'),
             'GENETIC_SYMBOLS': _int(self._get_field(1))

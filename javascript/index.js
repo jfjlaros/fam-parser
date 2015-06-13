@@ -20,7 +20,7 @@ function ord(character) {
 }
 
 function hex(value) {
-  return value.toString(16)
+  return value.toString(16);
 }
 
 /*
@@ -346,7 +346,7 @@ function FamParser(fileContent) {
             'P_G_MOTHER': getField(),
             'P_G_FATHER': getField()
           },
-          'ADDRESS': getField(),
+          'ADDRESS': text(getField(), 'COMMENT'),
           'ADDITIONAL_INFORMATION': text(getField(), 'COMMENT'),
           'DATE_OF_BIRTH': date(getField(4)),
           'DATE_OF_DEATH': date(getField(4)),
@@ -370,7 +370,7 @@ function FamParser(fileContent) {
 
     update(member, {
       'TWIN_ID': integer(getField(2)),
-      'COMMENT': getField(),
+      'COMMENT': text(getField(), 'COMMENT'),
       'ADOPTION_TYPE': annotate(getField(1), 'ADOPTION_TYPE'),
       'GENETIC_SYMBOLS': integer(getField(1))
     });
