@@ -241,3 +241,58 @@
         - name: unknown
           type: raw
           size: 12
+    - name: number_of_custom_descriptions
+      type: int
+      internal: True
+    - name: genetic_symbols
+      size: 19
+      structure:
+        - name: value
+    - name: additional_symbols
+      size: 4
+      structure:
+        - name: value
+    - name: custom_symbols
+      count: number_of_custom_descriptions
+      structure:
+        - name: name
+        - name: value
+    - name: unknown
+      type: raw
+      size: 14
+    - name: zoom
+      type: int
+    - name: unknown_1 # Zoom.
+      type: raw
+      size: 4
+    - name: unknown_2 # Zoom.
+      type: raw
+      size: 4
+    - name: unknown
+      type: raw
+      size: 20
+    - name: number_of_text_fields
+      type: int
+      internal: True
+    - name: text
+      count: number_of_text_fields
+      structure:
+        - name: comment
+        - name: unknown
+          type: raw
+          size: 54
+        - name: x_coordinate
+          type: short
+        - name: unknown
+          type: raw
+          size: 3
+        - name: y_coordinate
+          type: short
+        - name: unknown
+          type: raw
+          size: 7
+    - name: eof_marker
+      size: 11
+    - name: unknown
+      type: raw
+      size: 15
