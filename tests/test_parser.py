@@ -17,155 +17,168 @@ class TestParser(object):
 
 
     def test_source(self):
-        assert self.parsed['METADATA']['SOURCE'] == 'Pedigree Editor V6.5'
+        assert self.parsed['source'] == 'Pedigree Editor V6.5'
 
 
     def test_author(self):
-        assert (self.parsed['METADATA']['FAMILY_DRAWN_BY'] ==
-            'Jeroen F.J. Laros')
+        assert self.parsed['family_drawn_by'] == 'Jeroen F.J. Laros'
 
 
     def test_creation_date(self):
-        assert self.parsed['METADATA']['CREATION_DATE'] == '1111001'
+        assert self.parsed['creation_date'] == '1111001'
 
 
     def test_modification_date(self):
-        assert self.parsed['METADATA']['LAST_UPDATED'] == '2222033'
+        assert self.parsed['last_updated'] == '2222033'
 
 
     def test_symbols_1(self):
-        assert len(self.parsed['METADATA']['GENETIC_SYMBOLS']) == 19
+        assert len(self.parsed['genetic_symbols']) == 19
 
 
     def test_symbols_2(self):
-        assert len(self.parsed['METADATA']['ADDITIONAL_SYMBOLS']) == 5
+        assert len(self.parsed['additional_symbols']) == 4
 
 
     def test_symbols_3(self):
-        assert (self.parsed['METADATA']['ADDITIONAL_SYMBOLS'][4]['NAME'] ==
-            'custom symbol')
+        assert len(self.parsed['custom_symbols']) == 1
 
 
     def test_symbols_4(self):
-        assert (self.parsed['METADATA']['ADDITIONAL_SYMBOLS'][4]['VALUE'] ==
-            'AA')
+        assert self.parsed['custom_symbols'][0]['name'] == 'custom symbol'
+
+
+    def test_symbols_5(self):
+        assert self.parsed['custom_symbols'][0]['value'] == 'AA'
 
 
     def test_family_id(self):
-        assert self.parsed['FAMILY']['ID_NUMBER'] == '42'
+        assert self.parsed['id_number'] == '42'
 
 
     def test_family_name(self):
-        assert self.parsed['FAMILY']['NAME'] == 'Family Name'
+        assert self.parsed['name'] == 'Family Name'
 
 
     def test_comments(self):
-        assert self.parsed['FAMILY']['COMMENTS'] == 'Family related comments.'
+        assert self.parsed['comments'] == 'Family related comments.'
 
 
     def test_family_disease_loci_1(self):
-        assert len(self.parsed['FAMILY']['DISEASE_LOCI']) == 7
+        assert len(self.parsed['disease_loci']) == 7
 
 
     def test_family_disease_loci_2(self):
-        assert (self.parsed['FAMILY']['DISEASE_LOCI'][3]['PATTERN'] ==
-            'SLANTED_FORWARD')
+        assert self.parsed['disease_loci'][3]['pattern'] == 'slanted_forward'
 
 
     def test_family_disease_loci_3(self):
-        assert (self.parsed['FAMILY']['DISEASE_LOCI'][3]['COLOUR'] ==
-            '0x0000ff')
+        assert self.parsed['disease_loci'][3]['colour'] == '0x0000ff'
 
 
     def test_family_quantitative_value_loci(self):
-        assert len(self.parsed['FAMILY']['QUANTITATIVE_VALUE_LOCI']) == 7
+        assert len(self.parsed['quantitative_value_loci']) == 7
 
 
     def test_members(self):
-        assert len(self.parsed['FAMILY']['MEMBERS']) == 12
+        assert len(self.parsed['members']) == 12
 
 
     def test_member_id(self):
-        assert self.parsed['FAMILY']['MEMBERS'][0]['ID'] == 1
+        assert self.parsed['members'][0]['id'] == 1
 
 
     def test_member_individual_id(self):
-        assert self.parsed['FAMILY']['MEMBERS'][0]['INDIVIDUAL_ID'] == '1'
+        assert self.parsed['members'][0]['individual_id'] == '1'
 
 
     def test_member_forenames(self):
-        assert (self.parsed['FAMILY']['MEMBERS'][0]['FORENAMES'] ==
-            'Name1 Name2')
+        assert self.parsed['members'][0]['forenames'] == 'Name1 Name2'
 
 
     def test_member_surname_1(self):
-        assert self.parsed['FAMILY']['MEMBERS'][0]['SURNAME'] == 'Surname'
+        assert self.parsed['members'][0]['surname'] == 'Surname'
 
 
     def test_member_surname_2(self):
-        assert self.parsed['FAMILY']['MEMBERS'][1]['SURNAME'] == 'Surname'
+        assert self.parsed['members'][1]['surname'] == 'Surname'
 
 
     def test_member_age_gestation(self):
-        assert (self.parsed['FAMILY']['MEMBERS'][0]['AGE_GESTATION'] ==
-            'A/G text')
+        assert self.parsed['members'][0]['age_gestation'] == 'A/G text'
 
 
     def test_member_date_of_birth(self):
-        assert (self.parsed['FAMILY']['MEMBERS'][0]['DATE_OF_BIRTH'] ==
-            '1111001')
+        assert self.parsed['members'][0]['date_of_birth'] == '1111001'
 
 
     def test_member_date_of_death(self):
-        assert (self.parsed['FAMILY']['MEMBERS'][0]['DATE_OF_DEATH'] ==
-            '2222033')
+        assert self.parsed['members'][0]['date_of_death'] == '2222033'
 
 
     def test_member_adoption_type(self):
-        assert (self.parsed['FAMILY']['MEMBERS'][0]['ADOPTION_TYPE'] ==
-            'NOT_ADOPTED')
+        assert self.parsed['members'][0]['adoption_type'] == 'not_adopted'
 
 
     def test_member_gender(self):
-        assert self.parsed['FAMILY']['MEMBERS'][0]['SEX'] == 'MALE'
+        assert self.parsed['members'][0]['sex'] == 'male'
 
 
     def test_member_father_id_1(self):
-        assert self.parsed['FAMILY']['MEMBERS'][0]['FATHER_ID'] == 0
+        assert self.parsed['members'][0]['father_id'] == 0
 
 
     def test_member_father_id_2(self):
-        assert self.parsed['FAMILY']['MEMBERS'][1]['FATHER_ID'] == 7
+        assert self.parsed['members'][1]['father_id'] == 7
 
 
     def test_member_mother_id_1(self):
-        assert self.parsed['FAMILY']['MEMBERS'][0]['MOTHER_ID'] == 0
+        assert self.parsed['members'][0]['mother_id'] == 0
 
 
     def test_member_mother_id_2(self):
-        assert self.parsed['FAMILY']['MEMBERS'][1]['MOTHER_ID'] == 6
+        assert self.parsed['members'][1]['mother_id'] == 6
 
 
-    def test_relationships(self):
-        assert len(self.parsed['FAMILY']['RELATIONSHIPS']) == 4
+    def test_spouse_1(self):
+        assert self.parsed['members'][0]['spouses'][0]['spouse_id'] == 2
 
 
-    def test_relationship_member_1(self):
-        assert self.parsed['FAMILY']['RELATIONSHIPS'][0]['MEMBERS'][0] == 1
+    def test_spouse_2(self):
+        assert self.parsed['members'][7]['spouses'][1]['spouse_id'] == 10
 
 
-    def test_relationship_member_2(self):
-        assert self.parsed['FAMILY']['RELATIONSHIPS'][0]['MEMBERS'][1] == 2
+    def test_spouse_3(self):
+        assert self.parsed['members'][5]['spouses'][0]['divorced']
 
 
-    def test_relationship_consanguineous(self):
-        assert (self.parsed['FAMILY']['RELATIONSHIPS'][2]['CONSANGUINEOUS'] ==
-            True)
+    def test_spouse_4(self):
+        assert self.parsed['members'][7]['spouses'][0]['consanguineous']
 
 
-    def test_relationship_divorced(self):
-        assert self.parsed['FAMILY']['RELATIONSHIPS'][1]['DIVORCED'] == True
+    def test_spouse_5(self):
+        assert self.parsed['members'][7]['spouses'][0]['informal']
 
 
-    def test_relationship_informal(self):
-        assert self.parsed['FAMILY']['RELATIONSHIPS'][2]['INFORMAL'] == True
+    #def test_relationships(self):
+    #    assert len(self.parsed['relationships']) == 4
+
+
+    #def test_relationship_member_1(self):
+    #    assert self.parsed['relationships'][0]['members'][0] == 1
+
+
+    #def test_relationship_member_2(self):
+    #    assert self.parsed['relationships'][0]['members'][1] == 2
+
+
+    #def test_relationship_consanguineous(self):
+    #    assert self.parsed['relationships'][2]['consanguineous']
+
+
+    #def test_relationship_divorced(self):
+    #    assert self.parsed['relationships'][1]['divorced']
+
+
+    #def test_relationship_informal(self):
+    #    assert self.parsed['relationships'][2]['informal']

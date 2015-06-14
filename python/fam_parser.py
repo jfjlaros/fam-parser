@@ -288,14 +288,13 @@ class FamParser(object):
                             self._fields['sizeof']['map']),
                             item['map'])
                     elif item['type'] == 'flags':
-                        dest[item['name']] = self._flags(self._get_field(
-                            self._fields['sizeof']['flags']),
-                            item['flags'])
+                        dest.update(self._flags(self._get_field(
+                            self._fields['sizeof']['flags']), item['flags']))
                     elif item['type'] == 'text':
                         dest[item['name']] = self._text(self._get_field(),
                             item['split'])
                     elif item['type'] == 'conditional':
-                        if item['condition'] in dest:
+                        if dest[item['condition']]:
                             dest[item['name']] = _identity(
                                 self._get_field(size))
                 else:
