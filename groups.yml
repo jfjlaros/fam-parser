@@ -1,0 +1,9 @@
+---
+family:
+  - name
+  - id_number
+  - disease_loci
+  - comments
+  - quantitative_value_loci
+  - markers
+  - members

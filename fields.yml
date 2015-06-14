@@ -69,6 +69,9 @@ maps:
     0x01: plus
     0x02: minus
     0x03: o
+  date:
+    0xffffffff: defined
+    0x00000000: unknown
 flags:
   individual:
     0x01: blood

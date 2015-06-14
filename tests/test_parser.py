@@ -157,27 +157,3 @@ class TestParser(object):
 
     def test_spouse_5(self):
         assert self.parsed['members'][7]['spouses'][0]['informal']
-
-
-    #def test_relationships(self):
-    #    assert len(self.parsed['relationships']) == 4
-
-
-    #def test_relationship_member_1(self):
-    #    assert self.parsed['relationships'][0]['members'][0] == 1
-
-
-    #def test_relationship_member_2(self):
-    #    assert self.parsed['relationships'][0]['members'][1] == 2
-
-
-    #def test_relationship_consanguineous(self):
-    #    assert self.parsed['relationships'][2]['consanguineous']
-
-
-    #def test_relationship_divorced(self):
-    #    assert self.parsed['relationships'][1]['divorced']
-
-
-    #def test_relationship_informal(self):
-    #    assert self.parsed['relationships'][2]['informal']

@@ -5,7 +5,9 @@ FAM parser.
 (C) 2015 Jeroen F.J. Laros <J.F.J.Laros@lumc.nl>
 """
 
+
 import argparse
+import copy
 import json
 import os
 import sys
@@ -50,25 +52,6 @@ def _colour(data):
     return '0x{:06x}'.format(_int(data))
 
 
-def _date(data):
-    """
-    Decode a date.
-
-    The date is encoded as an integer, representing the year followed by
-    the (zero padded) day of the year.
-
-    :arg str data: Binary encoded date.
-
-    :return str: Date in format '%Y%j', 'defined' or 'unknown'.
-    """
-    date_int = _int(data)
-    if date_int:
-        if date_int == 0xffffffff:
-            return 'defined'
-        return str(date_int)
-    return 'unknown'
-
-
 def _block_write(string, block_size, stream=sys.stdout):
     """
     Write a string as a block of width {block_size}. This function is mainly
@@ -100,6 +83,7 @@ class FamParser(object):
         """
         self.data = input_handle.read()
         self.parsed = {}
+        self.cleaned = {}
         self._internal = {}
 
         self._json_output = json_output
@@ -114,17 +98,20 @@ class FamParser(object):
             'raw': _raw,
             'int': _int,
             'short': _int,
-            'date': _date,
+            'date': self._date,
             'colour': _colour
         }
 
         self._offset = 0
         self._raw_byte_count = 0
-        #self._relationship_keys = set([])
+        self._relationship_keys = set([])
 
         structure = yaml.load(open(
             os.path.join(os.path.dirname(__file__), '../structure.yml')))
         self._parse(structure, self.parsed)
+
+        self._cleanup()
+
         if self._internal['eof_marker'] != self._fields['eof_marker']:
             raise Exception('No EOF marker found.')
 
@@ -167,6 +154,24 @@ class FamParser(object):
         return '\n'.join(data.split(
             chr(self._fields['delimiters'][delimiters][0]) +
             chr(self._fields['delimiters'][delimiters][1])))
+
+
+    def _date(self, data):
+        """
+        Decode a date.
+
+        The date is encoded as an integer, representing the year followed by
+        the (zero padded) day of the year.
+
+        :arg str data: Binary encoded date.
+
+        :return str: Date in format '%Y%j', 'defined' or 'unknown'.
+        """
+        date_int = _int(data)
+
+        if date_int in self._fields['maps']['date']:
+            return self._fields['maps']['date'][date_int]
+        return str(date_int)
 
 
     def _annotate(self, data, annotation):
@@ -303,6 +308,40 @@ class FamParser(object):
                 self._log.write(' --> {}\n'.format(item['name']))
 
 
+    def _cleanup(self):
+        """
+        """
+        self.cleaned = copy.deepcopy(self.parsed)
+        groups = yaml.load(open(
+            os.path.join(os.path.dirname(__file__), '../groups.yml')))
+
+        for group in groups:
+            self.cleaned[group] = {}
+
+            for item in groups[group]:
+                self.cleaned[group][item] = self.cleaned.pop(item)
+
+        self.cleaned['family']['relationships'] = []
+        for member in self.cleaned['family']['members']:
+            for spouse in member['spouses']:
+                key = tuple(sorted((member['id'], spouse['spouse_id'])))
+
+                if key not in self._relationship_keys:
+                    relationship = spouse.copy()
+                    relationship['members'] = list(key)
+                    relationship.pop('spouse_id')
+
+                    self.cleaned['family']['relationships'].append(
+                        relationship)
+                    self._relationship_keys.add(key)
+            member.pop('spouses')
+
+        #self.cleaned['metadata'] = {}
+        #for item in self.cleaned:
+        #    if type(item) not in (list, dict):
+        #        self.cleaned['metadata']['item'] = self.cleaned.pop(item)
+
+
     def write(self, output_handle):
         """
         Write the parsed FAM file to a stream.
@@ -315,13 +354,13 @@ class FamParser(object):
         if self._json_output == True:
             if self._debug:
                 output_handle.write('--- JSON DUMP ---\n\n')
-            output_handle.write(json.dumps(self.parsed, indent=4,
+            output_handle.write(json.dumps(self.cleaned, indent=4,
                 separators=(',', ': ')))
             output_handle.write('\n')
         else:
             if self._debug:
                 output_handle.write('--- YAML DUMP ---\n\n')
-            yaml.dump(self.parsed, output_handle, width=76,
+            yaml.dump(self.cleaned, output_handle, width=76,
                 default_flow_style=False)
 
         if self._debug:

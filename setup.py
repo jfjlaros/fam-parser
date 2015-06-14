@@ -42,7 +42,8 @@ setup(
     url=distmeta['__homepage__'],
     data_files=[
         'fields.yml',
-        'structure.yml'
+        'structure.yml',
+        'groups.yml'
     ],
     license='MIT License',
     platforms=['any'],
