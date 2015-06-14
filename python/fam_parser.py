@@ -4,8 +4,6 @@ FAM parser.
 
 (C) 2015 Jeroen F.J. Laros <J.F.J.Laros@lumc.nl>
 """
-# NOTE: All integers are probably 2 bytes.
-# NOTE: Colours may be 4 bytes.
 
 import argparse
 import json
@@ -13,10 +11,6 @@ import os
 import sys
 
 import yaml
-
-
-def _identity(data):
-    return data
 
 
 def _raw(data):
@@ -93,17 +87,18 @@ class FamParser(object):
     """
     FAM file parsing.
     """
-    def __init__(self, json_output=False, experimental=False, debug=0,
-            log=sys.stdout):
+    def __init__(self, input_handle, json_output=False, experimental=False,
+            debug=0, log=sys.stdout):
         """
         Constructor.
 
+        :arg stream input_handle: Open readable handle to a FAM file.
         :arg bool json_output: Select JSON instead of YAML output.
         :arg bool experimental: Enable experimental features.
         :arg int debug: Debugging level.
         :arg stream log: Debug stream to write to.
         """
-        self.data = ''
+        self.data = input_handle.read()
         self.parsed = {}
         self._internal = {}
 
@@ -114,12 +109,24 @@ class FamParser(object):
 
         self._fields = yaml.load(open(
             os.path.join(os.path.dirname(__file__), '../fields.yml')))
-        self._structure = yaml.load(open(
-            os.path.join(os.path.dirname(__file__), '../structure.yml')))
+        self._functions = {
+            'trim': self._trim,
+            'raw': _raw,
+            'int': _int,
+            'short': _int,
+            'date': _date,
+            'colour': _colour
+        }
 
         self._offset = 0
         self._raw_byte_count = 0
-        self._relationship_keys = set([])
+        #self._relationship_keys = set([])
+
+        structure = yaml.load(open(
+            os.path.join(os.path.dirname(__file__), '../structure.yml')))
+        self._parse(structure, self.parsed)
+        if self._internal['eof_marker'] != self._fields['eof_marker']:
+            raise Exception('No EOF marker found.')
 
 
     def _get_field(self, size=0):
@@ -229,6 +236,8 @@ class FamParser(object):
 
     def _parse(self, structure, dest):
         """
+        :arg dict structure:
+        :arg dict dest:
         """
         for item in structure:
             if 'structure' in item:
@@ -244,79 +253,54 @@ class FamParser(object):
                         d = {}
                         self._parse(item['structure'], d)
                         dest[item['name']].append(d)
+                elif 'count' in item:
+                    for index in range(self._internal[item['count']]):
+                        d = {}
+                        self._parse(item['structure'], d)
+                        dest[item['name']].append(d)
                 elif 'delimiter' in item:
                     while (_int(self._get_field(1)) !=
                             self._fields['delimiters'][item['delimiter']]):
                         d = {}
                         self._parse(item['structure'], d)
                         dest[item['name']].append(d)
-                elif 'count' in item:
-                    for index in range(self._internal[item['count']]):
-                        d = {}
-                        self._parse(item['structure'], d)
-                        dest[item['name']].append(d)
                 else:
                     self._parse(item['structure'], dest[item['name']])
             else:
+                d = dest
+                if 'internal' in item:
+                    d = self._internal
+
                 size = 0
-                function = _identity
                 if 'size' in item:
                     size = item['size']
+
                 if 'type' in item:
-                    if item['type'] == 'trim':
-                        dest[item['name']] = self._trim(self._get_field(size))
-                    elif item['type'] == 'raw':
-                        dest[item['name']] = _raw(self._get_field(size))
-                    elif item['type'] == 'int':
-                        if 'internal' in item:
-                            self._internal[item['name']] = _int(
-                                self._get_field(self._fields['sizeof']['int']))
-                        else:
-                            dest[item['name']] = _int(self._get_field(
-                                self._fields['sizeof']['int']))
-                    elif item['type'] == 'short':
-                        dest[item['name']] = _int(self._get_field(
-                            self._fields['sizeof']['short']))
-                    elif item['type'] == 'date':
-                        dest[item['name']] = _date(self._get_field(
-                            self._fields['sizeof']['date']))
-                    elif item['type'] == 'colour':
-                        dest[item['name']] = _colour(self._get_field(
-                            self._fields['sizeof']['colour']))
-                    elif item['type'] == 'map':
-                        dest[item['name']] = self._annotate(self._get_field(
-                            self._fields['sizeof']['map']),
-                            item['map'])
+                    if item['type'] in ('int', 'short', 'date', 'colour'):
+                        size = self._fields['sizeof'][item['type']]
+
+                    if item['type'] == 'map':
+                        d[item['name']] = self._annotate(self._get_field(
+                            self._fields['sizeof']['map']), item['map'])
                     elif item['type'] == 'flags':
-                        dest.update(self._flags(self._get_field(
+                        d.update(self._flags(self._get_field(
                             self._fields['sizeof']['flags']), item['flags']))
                     elif item['type'] == 'text':
-                        dest[item['name']] = self._text(self._get_field(),
+                        d[item['name']] = self._text(self._get_field(),
                             item['split'])
                     elif item['type'] == 'conditional':
-                        if dest[item['condition']]:
-                            dest[item['name']] = _identity(
-                                self._get_field(size))
+                        if d[item['condition']]:
+                            d[item['name']] = self._get_field(size)
+                    else:
+                        d[item['name']] = self._functions[item['type']](
+                            self._get_field(size))
                 else:
                     if item['name']:
-                        dest[item['name']] = _identity(self._get_field(size))
+                        d[item['name']] = self._get_field(size)
                     else:
-                        self._parse_raw(dest, size)
-                if self._debug > 2:
-                    self._log.write(' --> {}\n'.format(item['name']))
-
-
-    def read(self, input_handle):
-        """
-        Read the FAM file and parse it.
-
-        :arg stream input_handle: Open readable handle to a FAM file.
-        """
-        self.data = input_handle.read()
-        self._parse(self._structure, self.parsed)
-
-        #if self._internal['eof_marker'] != self._fields['eof_marker']:
-        #    raise Exception('No EOF marker found.')
+                        self._parse_raw(d, size)
+            if self._debug > 2:
+                self._log.write(' --> {}\n'.format(item['name']))
 
 
     def write(self, output_handle):
@@ -353,7 +337,6 @@ class FamParser(object):
                 self._offset, data_length))
             output_handle.write('{} bytes parsed ({:d}%)\n'.format(
                 parsed, parsed * 100 // len(self.data)))
-            #output_handle.write('eof_marker: {}\n'.format(self._eof_marker))
 
 
 def fam_parser(input_handle, output_handle, json_output=False,
@@ -367,8 +350,7 @@ def fam_parser(input_handle, output_handle, json_output=False,
     :arg bool experimental: Enable experimental features.
     :arg int debug: Debugging level.
     """
-    parser = FamParser(json_output, experimental, debug)
-    parser.read(input_handle)
+    parser = FamParser(input_handle, json_output, experimental, debug)
     parser.write(output_handle)
 
 

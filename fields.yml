@@ -102,4 +102,4 @@ sizeof:
   int: 2
   colour: 3 # Perhaps 4?
   date: 4
-eof_marker: end of file
+eof_marker: End of File

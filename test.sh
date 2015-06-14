@@ -8,7 +8,7 @@ python_test() {
   for i in data/*.fam data/*.FAM; do
     $python_command $i $TEMP_FILE
 
-    if ! grep "^  eof_marker: End of File$" $TEMP_FILE > /dev/null; then
+    if ! grep "^eof_marker: End of File$" $TEMP_FILE > /dev/null; then
       echo
       echo Test failed for file $i.
     elif grep "^_RAW_[0-9][0-9]:.* 0d" $TEMP_FILE > /dev/null; then

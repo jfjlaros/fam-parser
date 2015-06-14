@@ -253,5 +253,6 @@
       size: 7
 - name: eof_marker
   size: 11
+  internal: true
 - name:
   size: 15

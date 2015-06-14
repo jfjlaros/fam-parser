@@ -11,8 +11,7 @@ class TestParser(object):
     Test the python.fam_parser module.
     """
     def setup(self):
-        parser = FamParser()
-        parser.read(open('data/example.fam'))
+        parser = FamParser(open('data/example.fam'))
         self.parsed = parser.parsed
 
 
