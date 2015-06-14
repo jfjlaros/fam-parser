@@ -108,48 +108,21 @@ function colour(data) {
 }
 
 /*
-Decode a date.
-
-The date is encoded as an integer, representing the year followed by the (zero
-padded) day of the year.
-
-:arg str data: Binary encoded date.
-
-:return str: Date in format '%Y%j', 'DEFINED' or 'UNKNOWN'.
-*/
-function date(data) {
-  var dateInt = integer(data);
-
-  if (dateInt) {
-    if (dateInt === 0xffffffff) {
-      return 'DEFINED';
-    }
-    return dateInt.toString();
-  }
-  return 'UNKNOWN';
-}
-
-/*
 FAM file parsing.
 */
 function FamParser(fileContent) {
   var data = fileContent,
-      parsed = {
-        'METADATA': {
-          'GENETIC_SYMBOLS': [],
-          'ADDITIONAL_SYMBOLS': []
-        },
-        'FAMILY': {
-          'MEMBERS': [],
-          'DISEASE_LOCI': [],
-          'QUANTITATIVE_VALUE_LOCI': [],
-          'RELATIONSHIPS': []
-        },
-        'TEXT_FIELDS': []
+      parsed = {},
+      internal = {},
+      fields = yaml.load(requireFile('../fields.yml')),
+      functions = {
+        'trim': trim,
+        'raw': raw,
+        'int': integer,
+        'short': integer,
+        'date': date,
+        'colour': colour
       },
-      definitions = yaml.load(requireFile('../fam_fields.yml')),
-      eofMarker = '',
-      lastId = 0,
       offset = 0,
       relationshipKeys = {}; // Should be a set.
 
@@ -170,7 +143,7 @@ function FamParser(fileContent) {
     }
     else {
       field = data.slice(offset, -1).split(
-        String.fromCharCode(definitions.DELIMITERS.FIELD))[0];
+        String.fromCharCode(fields.delimiters.field))[0];
       extracted = field.length + 1;
     }
 
@@ -179,13 +152,32 @@ function FamParser(fileContent) {
   }
 
   function trim(data) {
-    return data.split(String.fromCharCode(definitions.DELIMITERS.TRIM))[0];
+    return data.split(String.fromCharCode(fields.delimiters.trim))[0];
   }
 
   function text(data, delimiters) {
     return data.split(
-      String.fromCharCode(definitions.DELIMITERS[delimiters][0]) +
-      String.fromCharCode(definitions.DELIMITERS[delimiters][1])).join('\n');
+      String.fromCharCode(fields.delimiters[delimiters][0]) +
+      String.fromCharCode(fields.delimiters[delimiters][1])).join('\n');
+  }
+
+  /*
+  Decode a date.
+
+  The date is encoded as an integer, representing the year followed by the
+  (zero padded) day of the year.
+
+  :arg str data: Binary encoded date.
+
+  :return str: Date in format '%Y%j', 'defined' or 'unknown'.
+  */
+  function date(data) {
+    var dateInt = integer(data);
+
+    if (dateInt in fields.maps.date) {
+      return fields.maps.date[dateInt];
+    }
+    return dateInt.toString();
   }
 
   /*
@@ -199,8 +191,8 @@ function FamParser(fileContent) {
   function annotate(data, annotation) {
     var index = ord(data);
 
-    if (index in definitions.MAPS[annotation]) {
-      return definitions.MAPS[annotation][index];
+    if (index in fields.maps[annotation]) {
+      return fields.maps[annotation][index];
     }
     return convertToHex(data);
   }
@@ -220,298 +212,114 @@ function FamParser(fileContent) {
     for (flag = 0x01; flag < 0x100; flag <<= 1) {
       value = Boolean(flag & bitfield);
 
-      if (!(flag in definitions.FLAGS[annotation])) {
+      if (!(flag in fields.flags[annotation])) {
         if (value) {
-          destination['FLAGS_' + annotation + '_' + pad(hex(flag), 2)] = value;
+          destination['flags_' + annotation + '_' + pad(hex(flag), 2)] = value;
         }
       }
       else {
-        destination[definitions.FLAGS[annotation][flag]] = value;
+        destination[fields.flags[annotation][flag]] = value;
       }
     }
     return destination;
   }
 
   /*
-  Extract marker information.
-  */
-  function parseMarkers() {
-    while (raw(getField(1)) !== '01') {
-      getField(439);
-    }
-  }
-
-  /*
-  Extract disease locus information.
-  */
-  function parseDiseaseLocus() {
-    var locus = {
-          'NAME': getField(),
-          'COLOUR': colour(getField(3))
-        };
-
-    getField(1);
-    locus['PATTERN'] = annotate(getField(1), 'PATTERN');
-
-    parsed['FAMILY']['DISEASE_LOCI'].push(locus);
-  }
-
-  /*
-  Extract header information.
-  */
-  function parseHeader() {
-    var index;
-
-    parsed['METADATA']['SOURCE'] = trim(getField(26));
-    parsed['FAMILY']['NAME'] = getField();
-    parsed['FAMILY']['ID_NUMBER'] = getField();
-    parsed['METADATA']['FAMILY_DRAWN_BY'] = getField();
-    lastId = integer(getField(2));
-    getField(2); // LAST_INTERNAL_ID
-
-    for (index = 0; index < 7; index++) {
-      parseDiseaseLocus();
-    }
-
-    parsed['FAMILY']['COMMENTS'] = text(getField(), 'COMMENT');
-    parsed['METADATA']['CREATION_DATE'] = date(getField(4));
-    parsed['METADATA']['LAST_UPDATED'] = date(getField(4));
-
-    getField(5);
-    for (index = 0; index < 7; index++) {
-      parsed['FAMILY']['QUANTITATIVE_VALUE_LOCI'].push({'NAME': getField()});
-    }
-
-    parsed['METADATA']['SELECTED_ID'] = integer(getField(2));
-
-    getField(7);
-    parseMarkers();
-    getField(9);
-  }
-
-  /*
-  Extract relationship information.
-
-  :arg int personId: The partner in this relationship.
-  */
-  function parseRelationship(personId) {
-    var relationship = {'MEMBERS': [personId, integer(getField(2))].sort(
-          function(a,b) {return a - b;})},
-        key;
-
-    update(relationship, flags(getField(1), 'RELATIONSHIP'));
-
-    relationship['RELATION_NAME'] = getField();
-
-    key = relationship['MEMBERS'].toString();
-    if (relationshipKeys[key] === undefined) {
-      parsed['FAMILY']['RELATIONSHIPS'].push(relationship);
-      relationshipKeys[key] = true;
-    }
-  }
-
-  /*
-  Extract chromosome information.
-  */
-  function parseChromosome() {
-    var chromosome = {};
-
-    while (raw(getField(1)) !== '22') {
-      getField(11);
-    }
-    getField(9);
-  }
-
-  /*
-  Extract person information.
-  */
-  function parseMember() {
-    var member = {
-          'SURNAME': getField(),
-          'OTHER_SURNAMES': getField(),
-          'FORENAMES': getField(),
-          'KNOWN_AS': getField(),
-          'MAIDEN_NAME': getField(),
-          'ETHNICITY': {
-            'SELF': getField(),
-            'M_G_MOTHER': getField(),
-            'M_G_FATHER': getField(),
-            'P_G_MOTHER': getField(),
-            'P_G_FATHER': getField()
-          },
-          'ORIGINS': {
-            'SELF': getField(),
-            'M_G_MOTHER': getField(),
-            'M_G_FATHER': getField(),
-            'P_G_MOTHER': getField(),
-            'P_G_FATHER': getField()
-          },
-          'ADDRESS': text(getField(), 'COMMENT'),
-          'ADDITIONAL_INFORMATION': text(getField(), 'COMMENT'),
-          'DATE_OF_BIRTH': date(getField(4)),
-          'DATE_OF_DEATH': date(getField(4)),
-          'SEX': annotate(getField(1), 'SEX'),
-          'ID': integer(getField(2)),
-          'PEDIGREE_NUMBER': integer(getField(2)),
-          'MOTHER_ID': integer(getField(2)),
-          'FATHER_ID': integer(getField(2)),
-          'INTERNAL_ID': integer(getField(2)), // Remove?
-          'NUMBER_OF_INDIVIDUALS': integer(getField(2)),
-          'AGE_GESTATION': getField(),
-          'INDIVIDUAL_ID': getField()
-        },
-        numberOfSpouses = integer(getField(1)),
-        index;
-
-    getField(1);
-    for (index = 0; index < numberOfSpouses; index++) {
-      parseRelationship(member.ID);
-    }
-
-    update(member, {
-      'TWIN_ID': integer(getField(2)),
-      'COMMENT': text(getField(), 'COMMENT'),
-      'ADOPTION_TYPE': annotate(getField(1), 'ADOPTION_TYPE'),
-      'GENETIC_SYMBOLS': integer(getField(1))
-    });
-    getField(1);
-
-    update(member, flags(getField(1), 'INDIVIDUAL'));
-
-    update(member, {
-      'PROBAND': annotate(getField(1), 'PROBAND'),
-      'X_COORDINATE': integer(getField(2)),
-      'Y_COORDINATE': integer(getField(2)),
-      'ANNOTATION_1': annotate(getField(1), 'ANNOTATION_1'),
-      'MULTIPLE_PREGNANCIES': annotate(getField(1), 'MULTIPLE_PREGNANCIES')
-    });
-    getField(3);
-
-    parseChromosome();
-    getField(2);
-    parseChromosome();
-
-    member['ANNOTATION_2'] = annotate(getField(1), 'ANNOTATION_2');
-
-    getField(12);
-    for (index = 0; index < 7; index++) {
-      getField(24);
-    }
-
-    member['ADDITIONAL_SYMBOLS'] = integer(getField(1)); // -19?
-
-    // NOTE: DNA and BLOOD fields are switched in Cyrillic. i.e., if DNA is
-    // selected, the BLOOD_LOCATION field is stored and if BLOOD is
-    // selected, the DNA_LOCATION field is stored. This is probably a bug.
-    if (member['DNA']) {
-        member['DNA_LOCATION'] = getField();
-    }
-    if (member['BLOOD']) {
-        member['BLOOD_LOCATION'] = getField();
-    }
-    if (member['CELLS']) {
-        member['CELLS_LOCATION'] = getField();
-    }
-
-    update(member, flags(getField(1), 'SAMPLE'));
-
-    member['SAMPLE_NUMBER'] = getField();
-    getField(3);  // COLOUR
-    getField(17);
-    getField(2);  // PATTERN
-
-    parsed['FAMILY']['MEMBERS'].push(member);
-
-    return member['ID'];
-  }
-
-  /*
-  Extract information from a text field.
-  */
-  function parseText() {
-    // TODO: X and Y coordinates have more digits.
-    var textField = {};
-
-    textField['CONTENT'] = text(getField(), 'TEXT');
-    getField(54);
-    textField['X_COORDINATE'] = integer(getField(1));
-    getField(3);
-    textField['Y_COORDINATE'] = integer(getField(1));
-    getField(7);
-
-    parsed['TEXT_FIELDS'].push(textField);
-  }
-
-  /*
-  Extract information from the footer.
-  */
-  function parseFooter() {
-    var numberOfUnknownData = integer(getField(1)),
-        numberOfCustomDescriptions,
-        numberOfTextFields,
-        index;
-
-    getField(2);
-
-    for (index = 0; index < numberOfUnknownData; index++) {
-      getField(12);
-    }
-
-    numberOfCustomDescriptions = integer(getField(1));
-    getField(1);
-
-    for (index = 0; index < 19; index++) {
-      parsed['METADATA']['GENETIC_SYMBOLS'].push({
-        'NAME': definitions.MAPS['GENETIC_SYMBOL'][index],
-        'VALUE': getField()
-      });
-    }
-
-    for (index = 0; index < 4; index++) {
-      parsed['METADATA']['ADDITIONAL_SYMBOLS'].push({
-        'NAME': definitions.MAPS['ADDITIONAL_SYMBOL'][index],
-        'VALUE': getField()
-      });
-    }
-
-    for (index = 0; index < numberOfCustomDescriptions; index++) {
-      parsed['METADATA']['ADDITIONAL_SYMBOLS'].push({
-        'NAME': getField(),
-        'VALUE': getField()
-      });
-    }
-
-    getField(14);
-    parsed['METADATA']['ZOOM'] = integer(getField(2));
-    getField(4); // Zoom.
-    getField(4); // Zoom.
-    getField(20);
-
-    numberOfTextFields = integer(getField(1));
-    getField(1);
-
-    for (index = 0; index < numberOfTextFields; index++) {
-      parseText();
-    }
-
-    eofMarker = getField(11);
-    getField(15);
-  }
-
-  /*
   Parse a FAM file.
+
+  :arg dict structure:
+  :arg digt dest:
   */
-  function parse() {
-    var index;
+  function parse(structure, dest) {
+    var item,
+        index,
+        size,
+        d;
 
-    parseHeader();
+    for (item in structure) {
+      if (structure[item].structure) {
+        if (!(structure[item].name in dest)) {
+          if (structure[item].size || structure[item].delimiter ||
+              structure[item].count) {
+            dest[structure[item].name] = [];
+          }
+          else {
+            dest[structure[item].name] = {};
+          }
+        }
+        if (structure[item].size) {
+          for (index = 0; index < structure[item].size; index++) {
+            d = {};
+            parse(structure[item].structure, d);
+            dest[structure[item].name].push(d);
+          }
+        }
+        else if (structure[item].count) {
+          for (index = 0; index < internal[structure[item].count]; index++) {
+            d = {};
+            parse(structure[item].structure, d);
+            dest[structure[item].name].push(d);
+          }
+        }
+        else if (structure[item].delimiter) {
+          while (integer(getField(1)) !=
+              fields.delimiters[structure[item].delimiter]) {
+            d = {};
+            parse(structure[item].structure, d);
+            dest[structure[item].name].push(d);
+          }
+        }
+        else {
+          parse(structure[item].structure, dest[structure[item].name]);
+        }
+      }
+      else {
+        d = dest;
+        if (structure[item].internal) {
+          d = internal;
+        }
 
-    while (parseMember() !== lastId);
+        size = 0
+        if (structure[item].size) {
+          size = structure[item].size;
+        }
 
-    parseFooter();
-
-    if (eofMarker !== definitions.EOF_MARKER) {
-      throw 'No EOF marker found.';
+        if (structure[item].type) {
+          if (['int', 'short', 'date', 'colour'].indexOf(
+              structure[item].type) !== -1) {
+            size = fields.sizeof[structure[item].type];
+          }
+          if (structure[item].type == 'map') {
+            d[structure[item].name] = annotate(getField(fields.sizeof.map),
+              structure[item].map);
+          }
+          else if (structure[item].type == 'flags') {
+            update(d, flags(getField(fields.sizeof.flags),
+              structure[item].flags));
+          }
+          else if (structure[item].type == 'text') {
+            d[structure[item].name] = text(getField(),
+              structure[item]['split']);
+          }
+          else if (structure[item].type == 'conditional') {
+            if (d[structure[item]['condition']]) {
+              d[structure[item].name] = getField(size);
+            }
+          }
+          else {
+            d[structure[item].name] = functions[structure[item].type](
+              getField(size));
+         }
+        }
+        else {
+          if (structure[item].name) {
+            d[structure[item].name] = getField(size);
+          }
+          else {
+            getField(size);
+          }
+        }
+      }
     }
   }
 
@@ -522,7 +330,7 @@ function FamParser(fileContent) {
     console.log('--- YAML DUMP ---');
     console.log(yaml.dump(parsed));
     console.log('\n--- DEBUG INFO ---\n');
-    console.log('EOF_MARKER: ' + eofMarker);
+    console.log(yaml.dump(internal));
   };
 
   /*
@@ -532,7 +340,7 @@ function FamParser(fileContent) {
     return parsed;
   };
 
-  parse();
+  parse(yaml.load(requireFile('../structure.yml')), parsed);
 }
 
 module.exports = FamParser;
