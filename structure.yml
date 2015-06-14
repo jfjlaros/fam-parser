@@ -1,74 +1,50 @@
 ---
-- name: metadata
-  structure:
-    - name: source
-      type: trim
-      size: 26
-- name: family
+- name: source
+  type: trim
+  size: 26
+- name: name
+- name: id_number
+- name: family_drawn_by
+- name: last_id
+  type: int
+  internal: true
+- name: # last_internal_id
+  size: 2
+- name: disease_loci
+  size: 7
   structure:
     - name: name
-    - name: id_number
-- name: metadata
+    - name: colour
+      type: colour
+    - name:
+      size: 1
+    - name: pattern
+      type: map
+      map: pattern
+- name: comments
+  type: text
+  split: comment
+- name: creation_date
+  type: date
+- name: last_updated
+  type: date
+- name:
+  size: 5
+- name: quantitative_value_loci
+  size: 7
   structure:
-    - name: family_drawn_by
-    - name: last_id
-      type: int
-      internal: true
-    - name: unknown # last_internal_id
-      type: raw
-      size: 2
-- name: family
+    - name: name
+- name: selected_id
+  type: int
+- name:
+  size: 7
+- name: markers
+  delimiter: marker
   structure:
-    - name: disease_loci
-      size: 7
-      structure:
-        - name: name
-        - name: colour
-          type: colour
-        - name: unknown
-          type: raw
-          size: 1
-        - name: pattern
-          type: map
-          map: PATTERN
-    - name: comments
-      type: text
-      split: COMMENT
-- name: metadata
-  structure:
-    - name: creation_date
-      type: date
-    - name: last_updated
-      type: date
-    - name: unknown
-      type: raw
-      size: 5
-- name: family
-  structure:
-    - name: quantitative_value_loci
-      size: 7
-      structure:
-        - name: name
-- name: metadata
-  structure:
-    - name: selected_id
-      type: int
-    - name: unknown
-      type: raw
-      size: 7
-- name: family
-  structure:
-    - name: markers
-      delimiter: MARKER
-      structure:
-        - name: unknown
-          type: raw
-          size: 439
-- name: metadata
-  structure:
-    - name: unknown
-      type: raw
-      size: 9
+    - name:
+      size: 439
+- name:
+  size: 9
 - name: members
   count: last_id
   structure:
@@ -93,17 +69,17 @@
         - name: p_g_father
     - name: address
       type: text
-      split: COMMENT
+      split: comment
     - name: additional_information
       type: text
-      split: COMMENT
+      split: comment
     - name: date_of_birth
       type: date
     - name: date_of_death
       type: date
     - name: sex
       type: map
-      map: SEX
+      map: sex
     - name: id
       type: int
     - name: pedigree_number
@@ -112,7 +88,7 @@
       type: int
     - name: father_id
       type: int
-    - name: internal_id # remove?
+    - name: internal_id # Remove?
       type: int
     - name: number_of_individuals
       type: int
@@ -120,7 +96,7 @@
     - name: individual_id
     - name: number_of_spouses
       type: int
-      internal: True
+      internal: true
     - name: spouses
       count: number_of_spouses
       structure:
@@ -128,52 +104,48 @@
           type: int
         - name: flags
           type: flags
-          flags: RELATIONSHIP
+          flags: relationship
         - name: name
     - name: twin_id
       type: int
     - name: comment
       type: text
-      split: COMMENT
+      split: comment
     - name: adoption_type
       type: map
-      map: ADOPTION_TYPE
+      map: adoption_type
     - name: genetic_symbols
       type: short
-    - name: unknown
-      type: raw
+    - name:
       size: 1
     - name: flags
       type: flags
-      flags: INDIVIDUAL
+      flags: individual
     - name: proband
       type: map
-      map: PROBAND
+      map: proband
     - name: x_coordinate
       type: int
     - name: y_coordinate
       type: int
     - name: annotation_1
       type: map
-      map: ANNOTATION_1
+      map: annotation_1
     - name: multiple_pregnancies
       type: map
-      map: MULTIPLE_PREGNANCIES
-    - name: unknown
-      type: raw
+      map: multiple_pregnancies
+    - name:
       size: 3
     - name: crossover
       structure:
         - name: allele_1
           structure:
             - name: co
-              delimiter: CROSSOVER
+              delimiter: crossover
               structure:
-                - name: unknown
-                  type: raw
+                - name:
                   size: 11
-        - name: unknown
-          type: raw
+        - name:
           size: 9
     - name: unknown1
       type: raw
@@ -183,116 +155,103 @@
         - name: allele_2
           structure:
             - name: co
-              delimiter: CROSSOVER
+              delimiter: crossover
               structure:
-                - name: unknown
-                  type: raw
+                - name:
                   size: 11
-        - name: unknown
-          type: raw
+        - name:
           size: 9
-    - name: unknown
-      type: raw
+    - name:
       size: 12
     - name: unknown_list
       size: 7
       structure:
-        - name: unknown
-          type: raw
+        - name:
           size: 24
     - name: annotation_2
       type: map
-      map: ANNOTATION_2
+      map: annotation_2
     - name: additional_symbols
       type: short
+    # NOTE: DNA and BLOOD fields are switched in Cyrillic. i.e., if DNA is
+    # selected, the BLOOD_LOCATION field is stored and if BLOOD is
+    # selected, the DNA_LOCATION field is stored. This is probably a bug.
     - name: dna_location
       type: conditional
-      condition: DNA
+      condition: dna
     - name: blood_location
       type: conditional
-      condition: BLOOD
+      condition: blood
     - name: cells_location
       type: conditional
-      condition: CELLS
+      condition: cells
     - name: sample
       type: flags
-      flags: SAMPLE
+      flags: sample
     - name: sample_number
-    - name: unknown # colour
-      type: raw
+    - name: # colour
       size: 3
-    - name: unknown
-      type: raw
+    - name:
       size: 17
-    - name: unknown # pattern
-      type: raw
+    - name: # pattern
       size: 2
-- name: metadata
+- name: number_of_unknown_data
+  type: int
+  internal: true
+- name:
+  size: 1
+- name: unknown_data
+  count: number_of_unknown_data
   structure:
-    - name: number_of_unknown_data
-      type: int
-      internal: True
-    - name: unknown
-      type: raw
-      size: 1
-    - name: unknown_data
-      count: number_of_unknown_data
-      structure:
-        - name: unknown
-          type: raw
-          size: 12
-    - name: number_of_custom_descriptions
-      type: int
-      internal: True
-    - name: genetic_symbols
-      size: 19
-      structure:
-        - name: value
-    - name: additional_symbols
-      size: 4
-      structure:
-        - name: value
-    - name: custom_symbols
-      count: number_of_custom_descriptions
-      structure:
-        - name: name
-        - name: value
-    - name: unknown
-      type: raw
-      size: 14
-    - name: zoom
-      type: int
-    - name: unknown_1 # Zoom.
-      type: raw
-      size: 4
-    - name: unknown_2 # Zoom.
-      type: raw
-      size: 4
-    - name: unknown
-      type: raw
-      size: 20
-    - name: number_of_text_fields
-      type: int
-      internal: True
-    - name: text
-      count: number_of_text_fields
-      structure:
-        - name: comment
-        - name: unknown
-          type: raw
-          size: 54
-        - name: x_coordinate
-          type: short
-        - name: unknown
-          type: raw
-          size: 3
-        - name: y_coordinate
-          type: short
-        - name: unknown
-          type: raw
-          size: 7
-    - name: eof_marker
-      size: 11
-    - name: unknown
-      type: raw
-      size: 15
+    - name:
+      size: 12
+- name: number_of_custom_descriptions
+  type: int
+  internal: true
+- name: genetic_symbols
+  size: 19
+  structure:
+    - name: value
+- name: additional_symbols
+  size: 4
+  structure:
+    - name: value
+- name: custom_symbols
+  count: number_of_custom_descriptions
+  structure:
+    - name: name
+    - name: value
+- name:
+  size: 14
+- name: zoom
+  type: int
+- name: unknown_1 # Zoom.
+  type: raw
+  size: 4
+- name: unknown_2 # Zoom.
+  type: raw
+  size: 4
+- name:
+  size: 20
+- name: number_of_text_fields
+  type: int
+  internal: true
+# TODO: x and y coordinates have more digits.
+- name: text
+  count: number_of_text_fields
+  structure:
+    - name: comment
+    - name:
+      size: 54
+    - name: x_coordinate
+      type: short
+    - name:
+      size: 3
+    - name: y_coordinate
+      type: short
+    - name:
+      size: 7
+- name: eof_marker
+  size: 11
+- name:
+  size: 15

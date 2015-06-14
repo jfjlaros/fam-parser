@@ -1,0 +1,105 @@
+---
+maps:
+  proband:
+    0x00: not_a_proband
+    0x01: above_left
+    0x02: above_right
+    0x03: below_left
+    0x04: below_right
+    0x05: left
+    0x06: right
+  sex:
+    0x00: male
+    0x01: female
+    0x02: unknown
+  multiple_pregnancies:
+    0x00: singleton
+    0x01: monozygotic_twins
+    0x02: dizygotic_twins
+    0x03: twin_type_unknown
+    0x04: triplet
+    0x05: quadruplet
+    0x06: quintuplet
+    0x07: sextuplet
+  adoption_type:
+    0x00: adopted_into_family
+    0x01: not_adopted
+    0x02: possibly_adopted_into_family
+    0x03: adopted_out_of_family
+  annotation_1:
+    0x00: none
+    0x01: p
+    0x02: sab
+    0x03: top
+    0x04: sb
+    0x0b: bar
+  annotation_2:
+    0x00: none
+    0x01: affected
+  pattern:
+    0x00: horizontal
+    0x01: vertical
+    0x02: slanted_back
+    0x03: slanted_forward
+    0x04: grid
+    0x05: diagonal_grid
+    0xff: fill
+  genetic_symbol:
+    0x00: clear
+    0x01: unaffected
+    0x02: affected
+    0x03: carrier
+    0x04: possibly_affected
+    0x05: q1
+    0x06: q2
+    0x07: q3
+    0x08: q4
+    0x09: heterozygous
+    0x0a: q1_q3
+    0x0b: q1_q4
+    0x0c: q2_q3
+    0x0d: q2_q4
+    0x0e: q3_q4
+    0x0f: q1_q2_q3
+    0x10: q1_q2_q4
+    0x11: q1_q3_q4
+    0x12: q2_q3_q4
+  additional_symbol:
+    0x00: cross
+    0x01: plus
+    0x02: minus
+    0x03: o
+flags:
+  individual:
+    0x01: blood
+    0x02: dna
+    0x04: loop_breakpoint
+    0x08: hide_info
+    0x10: committed_suicide
+    0x20: cells
+  relationship:
+    0x01: informal
+    0x02: consanguineous
+    0x04: separated
+    0x08: divorced
+  sample:
+    0x01: sample_required
+delimiters:
+  field: 0x0d
+  trim: 0x00
+  comment:
+    - 0x09
+    - 0x03
+  text:
+    - 0x0b
+    - 0x0b
+  marker: 0x01
+  crossover: 0x22
+sizeof:
+  short: 1
+  map: 1
+  flags: 1
+  int: 2
+  colour: 3 # Perhaps 4?
+  date: 4
+eof_marker: end of file
