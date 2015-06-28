@@ -22,7 +22,6 @@
       type: map
       map: pattern
 - name: comments
-  type: text
   split: comment
 - name: creation_date
   type: date
@@ -46,7 +45,8 @@
 - name:
   size: 9
 - name: members
-  count: last_id
+  term: last_id
+  match: id
   structure:
     - name: surname
     - name: other_surnames
@@ -68,10 +68,8 @@
         - name: p_g_mother
         - name: p_g_father
     - name: address
-      type: text
       split: comment
     - name: additional_information
-      type: text
       split: comment
     - name: date_of_birth
       type: date
@@ -98,9 +96,9 @@
       type: int
       internal: true
     - name: spouses
-      count: number_of_spouses
+      size: number_of_spouses
       structure:
-        - name: spouse_id
+        - name: id
           type: int
         - name: flags
           type: flags
@@ -109,7 +107,6 @@
     - name: twin_id
       type: int
     - name: comment
-      type: text
       split: comment
     - name: adoption_type
       type: map
@@ -201,7 +198,7 @@
 - name:
   size: 1
 - name: unknown_data
-  count: number_of_unknown_data
+  size: number_of_unknown_data
   structure:
     - name:
       size: 12
@@ -217,7 +214,7 @@
   structure:
     - name: value
 - name: custom_symbols
-  count: number_of_custom_descriptions
+  size: number_of_custom_descriptions
   structure:
     - name: name
     - name: value
@@ -238,9 +235,10 @@
   internal: true
 # TODO: x and y coordinates have more digits.
 - name: text
-  count: number_of_text_fields
+  size: number_of_text_fields
   structure:
     - name: comment
+      split: text
     - name:
       size: 54
     - name: x_coordinate
