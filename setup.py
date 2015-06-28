@@ -2,7 +2,7 @@ import os
 from setuptools import setup
 import sys
 
-requires = ['pyyaml']
+requires = ['bin-parser']
 
 # Python 2.6 does not include the argparse module.
 try:
@@ -33,7 +33,7 @@ except IOError:
     long_description = 'See ' + distmeta['__homepage__']
 
 setup(
-    name='fam_parser',
+    name='fam-parser',
     version=distmeta['__version_info__'],
     description='FAM file parser',
     long_description=long_description,
@@ -41,9 +41,8 @@ setup(
     author_email=distmeta['__contact__'],
     url=distmeta['__homepage__'],
     data_files=[
-        'fields.yml',
-        'structure.yml',
-        'groups.yml'
+        'types.yml',
+        'structure.yml'
     ],
     license='MIT License',
     platforms=['any'],

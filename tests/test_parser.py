@@ -3,7 +3,7 @@ Tests for the python.fam_parser module.
 """
 
 
-from fam_parser import FamParser
+from bin_parser import BinParser
 
 
 class TestParser(object):
@@ -11,7 +11,8 @@ class TestParser(object):
     Test the python.fam_parser module.
     """
     def setup(self):
-        parser = FamParser(open('data/example.fam'))
+        parser = BinParser(open('data/example.fam'), open('structure.yml'),
+            open('types.yml'))
         self.parsed = parser.parsed
 
 
@@ -140,11 +141,11 @@ class TestParser(object):
 
 
     def test_spouse_1(self):
-        assert self.parsed['members'][0]['spouses'][0]['spouse_id'] == 2
+        assert self.parsed['members'][0]['spouses'][0]['id'] == 2
 
 
     def test_spouse_2(self):
-        assert self.parsed['members'][7]['spouses'][1]['spouse_id'] == 10
+        assert self.parsed['members'][7]['spouses'][1]['id'] == 10
 
 
     def test_spouse_3(self):

@@ -8,9 +8,6 @@ Licensed under the MIT license, see the LICENSE file.
 """
 
 
-from .fam_parser import FamParser, fam_parser
-
-
 __version_info__ = ('0', '0', '3', 'dev')
 __date__ = '27 May 2015'
 
