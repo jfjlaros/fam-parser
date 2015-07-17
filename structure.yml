@@ -7,11 +7,10 @@
 - name: family_drawn_by
 - name: last_id
   type: int
-  internal: true
 - name: # last_internal_id
   size: 2
 - name: disease_loci
-  size: 7
+  for: 7
   structure:
     - name: name
     - name: colour
@@ -30,7 +29,7 @@
 - name:
   size: 5
 - name: quantitative_value_loci
-  size: 7
+  for: 7
   structure:
     - name: name
 - name: selected_id
@@ -38,15 +37,25 @@
 - name:
   size: 7
 - name: markers
-  delimiter: marker
+  while:
+    operands:
+      - marker_delimiter
+      - separator
+    operator: ne
+    term: marker_term
   structure:
+    - name: separator
+      type: short
     - name:
-      size: 439
+      size: 438
 - name:
   size: 9
 - name: members
-  term: last_id
-  match: id
+  do_while:
+    operands:
+      - last_id
+      - id
+    operator: ne
   structure:
     - name: surname
     - name: other_surnames
@@ -94,9 +103,8 @@
     - name: individual_id
     - name: number_of_spouses
       type: int
-      internal: true
     - name: spouses
-      size: number_of_spouses
+      for: number_of_spouses
       structure:
         - name: id
           type: int
@@ -138,10 +146,17 @@
         - name: allele_1
           structure:
             - name: co
-              delimiter: crossover
+              while:
+                operands:
+                  - crossover_delimiter
+                  - separator
+                operator: ne
+                term: crossover_term
               structure:
+                - name: separator
+                  type: short
                 - name:
-                  size: 11
+                  size: 10
         - name:
           size: 9
     - name: unknown1
@@ -152,16 +167,23 @@
         - name: allele_2
           structure:
             - name: co
-              delimiter: crossover
+              while:
+                operands:
+                  - crossover_delimiter
+                  - separator
+                operator: ne
+                term: crossover_term
               structure:
+                - name: separator
+                  type: short
                 - name:
-                  size: 11
+                  size: 10
         - name:
           size: 9
     - name:
       size: 12
     - name: unknown_list
-      size: 7
+      for: 7
       structure:
         - name:
           size: 24
@@ -174,14 +196,17 @@
     # selected, the BLOOD_LOCATION field is stored and if BLOOD is
     # selected, the DNA_LOCATION field is stored. This is probably a bug.
     - name: dna_location
-      type: conditional
-      condition: dna
+      if:
+        operands:
+          - dna
     - name: blood_location
-      type: conditional
-      condition: blood
+      if:
+        operands:
+          - blood
     - name: cells_location
-      type: conditional
-      condition: cells
+      if:
+        operands:
+          - cells
     - name: sample
       type: flags
       flags: sample
@@ -194,27 +219,25 @@
       size: 2
 - name: number_of_unknown_data
   type: int
-  internal: true
 - name:
   size: 1
 - name: unknown_data
-  size: number_of_unknown_data
+  for: number_of_unknown_data
   structure:
     - name:
       size: 12
 - name: number_of_custom_descriptions
   type: int
-  internal: true
 - name: genetic_symbols
-  size: 19
+  for: 19
   structure:
     - name: value
 - name: additional_symbols
-  size: 4
+  for: 4
   structure:
     - name: value
 - name: custom_symbols
-  size: number_of_custom_descriptions
+  for: number_of_custom_descriptions
   structure:
     - name: name
     - name: value
@@ -232,10 +255,9 @@
   size: 20
 - name: number_of_text_fields
   type: int
-  internal: true
 # TODO: x and y coordinates have more digits.
 - name: text
-  size: number_of_text_fields
+  for: number_of_text_fields
   structure:
     - name: comment
       split: text
@@ -251,6 +273,5 @@
       size: 7
 - name: eof_marker
   size: 11
-  internal: true
 - name:
   size: 15

@@ -26,7 +26,7 @@ javascript_test() {
   for i in data/*.fam data/*.FAM; do
     $javascript_command $i > $TEMP_FILE
 
-    if ! grep "^EOF_MARKER: End of File$" $TEMP_FILE > /dev/null; then
+    if ! grep "^eof_marker: End of File$" $TEMP_FILE > /dev/null; then
       echo
       echo Test failed for file $i.
     else
@@ -56,7 +56,7 @@ concordance_test() {
 
 TEMP_FILE="/tmp/.test_$RANDOM"
 python_test
-#javascript_test
+javascript_test
 TEMP_FILE2="/tmp/.test_$RANDOM"
 #concordance_test
 rm $TEMP_FILE $TEMP_FILE2

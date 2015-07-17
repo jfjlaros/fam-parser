@@ -1,7 +1,7 @@
 ---
-delimiters:
-  marker: 0x01
-  crossover: 0x22
+constants:
+  marker_delimiter: 0x01
+  crossover_delimiter: 0x22
 default: text
 int:
   size: 2
