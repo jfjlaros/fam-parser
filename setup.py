@@ -50,6 +50,6 @@ setup(
     install_requires=requires,
     package_dir={'fam_parser': 'python'},
     entry_points={
-        'console_scripts': ['fam_parser = fam_parser.fam_parser:main']
+        'console_scripts': ['fam_parser = fam_parser.cli:main']
     }
 )
