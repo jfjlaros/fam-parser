@@ -18,10 +18,9 @@
     - name:
       size: 1
     - name: pattern
-      type: map
-      map: pattern
+      type: pattern
 - name: comments
-  split: comment
+  type: comment
 - name: creation_date
   type: date
 - name: last_updated
@@ -77,16 +76,15 @@
         - name: p_g_mother
         - name: p_g_father
     - name: address
-      split: comment
+      type: comment
     - name: additional_information
-      split: comment
+      type: comment
     - name: date_of_birth
       type: date
     - name: date_of_death
       type: date
     - name: sex
-      type: map
-      map: sex
+      type: sex
     - name: id
       type: int
     - name: pedigree_number
@@ -109,36 +107,30 @@
         - name: id
           type: int
         - name: flags
-          type: flags
-          flags: relationship
+          type: relationship
         - name: name
     - name: twin_id
       type: int
     - name: comment
-      split: comment
+      type: comment
     - name: adoption_type
-      type: map
-      map: adoption_type
+      type: adoption_type
     - name: genetic_symbols
       type: short
     - name:
       size: 1
     - name: flags
-      type: flags
-      flags: individual
+      type: individual
     - name: proband
-      type: map
-      map: proband
+      type: proband
     - name: x_coordinate
       type: int
     - name: y_coordinate
       type: int
     - name: annotation_1
-      type: map
-      map: annotation_1
+      type: annotation_1
     - name: multiple_pregnancies
-      type: map
-      map: multiple_pregnancies
+      type: multiple_pregnancies
     - name:
       size: 3
     - name: crossover
@@ -188,8 +180,7 @@
         - name:
           size: 24
     - name: annotation_2
-      type: map
-      map: annotation_2
+      type: annotation_2
     - name: additional_symbols
       type: short
     # NOTE: DNA and BLOOD fields are switched in Cyrillic. i.e., if DNA is
@@ -208,8 +199,7 @@
         operands:
           - cells
     - name: sample
-      type: flags
-      flags: sample
+      type: sample
     - name: sample_number
     - name: # colour
       size: 3
@@ -260,7 +250,6 @@
   for: number_of_text_fields
   structure:
     - name: comment
-      split: text
     - name:
       size: 54
     - name: x_coordinate

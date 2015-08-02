@@ -2,40 +2,43 @@
 constants:
   marker_delimiter: 0x01
   crossover_delimiter: 0x22
-default: text
 int:
   size: 2
 short:
   size: 1
   function: int
-flags:
-  size: 1
 colour:
   size: 3
 date:
   size: 4
-  data:
-    0xffffffff: defined
-    0x00000000: unknown
+  args:
+    annotation:
+      0xffffffff: defined
+      0x00000000: unknown
 trim:
-  delimiter:
-    - 0x00
+  args:
+    delimiter:
+      - 0x00
 text:
-  delimiter:
-    - 0x0d
-  arg: split
-  data:
-    comment:
+  args:
+    delimiter:
+      - 0x0d
+    split:
+      - 0x0b
+      - 0x0b
+comment:
+  function: text
+  args:
+    delimiter:
+      - 0x0d
+    split:
       - 0x09
       - 0x03
-    text:
-      - 0x0b
-      - 0x0b
-map:
+proband:
   size: 1
-  arg: map
-  data:
-    proband:
+  function: map
+  args:
+    annotation:
       0x00: not_a_proband
       0x01: above_left
       0x02: above_right
@@ -43,11 +46,19 @@ map:
       0x04: below_right
       0x05: left
       0x06: right
-    sex:
+sex:
+  size: 1
+  function: map
+  args:
+    annotation:
       0x00: male
       0x01: female
       0x02: unknown
-    multiple_pregnancies:
+multiple_pregnancies:
+  size: 1
+  function: map
+  args:
+    annotation:
       0x00: singleton
       0x01: monozygotic_twins
       0x02: dizygotic_twins
@@ -56,22 +67,38 @@ map:
       0x05: quadruplet
       0x06: quintuplet
       0x07: sextuplet
-    adoption_type:
+adoption_type:
+  size: 1
+  function: map
+  args:
+    annotation:
       0x00: adopted_into_family
       0x01: not_adopted
       0x02: possibly_adopted_into_family
       0x03: adopted_out_of_family
-    annotation_1:
+annotation_1:
+  size: 1
+  function: map
+  args:
+    annotation:
       0x00: none
       0x01: p
       0x02: sab
       0x03: top
       0x04: sb
       0x0b: bar
-    annotation_2:
+annotation_2:
+  size: 1
+  function: map
+  args:
+    annotation:
       0x00: none
       0x01: affected
-    pattern:
+pattern:
+  size: 1
+  function: map
+  args:
+    annotation:
       0x00: horizontal
       0x01: vertical
       0x02: slanted_back
@@ -79,7 +106,11 @@ map:
       0x04: grid
       0x05: diagonal_grid
       0xff: fill
-    genetic_symbol:
+genetic_symbol:
+  size: 1
+  function: map
+  args:
+    annotation:
       0x00: clear
       0x01: unaffected
       0x02: affected
@@ -99,29 +130,42 @@ map:
       0x10: q1_q2_q4
       0x11: q1_q3_q4
       0x12: q2_q3_q4
-    additional_symbol:
+additional_symbol:
+  size: 1
+  function: map
+  args:
+    default: additional_symbol
+    annotation:
       0x00: cross
       0x01: plus
       0x02: minus
       0x03: o
-    date:
-      0xffffffff: defined
-      0x00000000: unknown
-flags:
+individual:
   size: 1
-  arg: flags
-  data:
-    individual:
+  function: flags
+  args:
+    default: individual
+    annotation:
       0x01: blood
       0x02: dna
       0x04: loop_breakpoint
       0x08: hide_info
       0x10: committed_suicide
       0x20: cells
-    relationship:
+relationship:
+  size: 1
+  function: flags
+  args:
+    default: relationship
+    annotation:
       0x01: informal
       0x02: consanguineous
       0x04: separated
       0x08: divorced
-    sample:
+sample:
+  size: 1
+  function: flags
+  args:
+    default: sample
+    annotation:
       0x01: sample_required
