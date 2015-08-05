@@ -1,14 +1,13 @@
 ---
 - name: source
   type: trim
-  size: 26
 - name: name
 - name: id_number
 - name: family_drawn_by
 - name: last_id
   type: int
 - name: # last_internal_id
-  size: 2
+  read: 2
 - name: disease_loci
   for: 7
   structure:
@@ -16,7 +15,7 @@
     - name: colour
       type: colour
     - name:
-      size: 1
+      read: 1
     - name: pattern
       type: pattern
 - name: comments
@@ -26,7 +25,7 @@
 - name: last_updated
   type: date
 - name:
-  size: 5
+  read: 5
 - name: quantitative_value_loci
   for: 7
   structure:
@@ -34,7 +33,7 @@
 - name: selected_id
   type: int
 - name:
-  size: 7
+  read: 7
 - name: markers
   while:
     operands:
@@ -46,9 +45,9 @@
     - name: separator
       type: short
     - name:
-      size: 438
+      read: 438
 - name:
-  size: 9
+  read: 9
 - name: members
   do_while:
     operands:
@@ -118,7 +117,7 @@
     - name: genetic_symbols
       type: short
     - name:
-      size: 1
+      read: 1
     - name: flags
       type: individual
     - name: proband
@@ -132,7 +131,7 @@
     - name: multiple_pregnancies
       type: multiple_pregnancies
     - name:
-      size: 3
+      read: 3
     - name: crossover
       structure:
         - name: allele_1
@@ -148,12 +147,12 @@
                 - name: separator
                   type: short
                 - name:
-                  size: 10
+                  read: 10
         - name:
-          size: 9
+          read: 9
     - name: unknown1
       type: raw
-      size: 2
+      read: 2
     - name: crossover
       structure:
         - name: allele_2
@@ -169,16 +168,16 @@
                 - name: separator
                   type: short
                 - name:
-                  size: 10
+                  read: 10
         - name:
-          size: 9
+          read: 9
     - name:
-      size: 12
+      read: 12
     - name: unknown_list
       for: 7
       structure:
         - name:
-          size: 24
+          read: 24
     - name: annotation_2
       type: annotation_2
     - name: additional_symbols
@@ -202,20 +201,20 @@
       type: sample
     - name: sample_number
     - name: # colour
-      size: 3
+      read: 3
     - name:
-      size: 17
+      read: 17
     - name: # pattern
-      size: 2
+      read: 2
 - name: number_of_unknown_data
   type: int
 - name:
-  size: 1
+  read: 1 # FIXME: 1 should be default.
 - name: unknown_data
   for: number_of_unknown_data
   structure:
     - name:
-      size: 12
+      read: 12
 - name: number_of_custom_descriptions
   type: int
 - name: genetic_symbols
@@ -232,17 +231,17 @@
     - name: name
     - name: value
 - name:
-  size: 14
+  read: 14
 - name: zoom
   type: int
 - name: unknown_1 # Zoom.
   type: raw
-  size: 4
+  read: 4
 - name: unknown_2 # Zoom.
   type: raw
-  size: 4
+  read: 4
 - name:
-  size: 20
+  read: 20
 - name: number_of_text_fields
   type: int
 # TODO: x and y coordinates have more digits.
@@ -251,16 +250,14 @@
   structure:
     - name: comment
     - name:
-      size: 54
+      read: 54
     - name: x_coordinate
       type: short
     - name:
-      size: 3
+      read: 3
     - name: y_coordinate
       type: short
     - name:
-      size: 7
+      read: 7
 - name: eof_marker
-  size: 11
-- name:
-  size: 15
+  type: trim

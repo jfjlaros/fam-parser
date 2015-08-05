@@ -2,170 +2,176 @@
 constants:
   marker_delimiter: 0x01
   crossover_delimiter: 0x22
-int:
-  size: 2
-short:
-  size: 1
-  function: int
-colour:
-  size: 3
-date:
-  size: 4
-  args:
-    annotation:
-      0xffffffff: defined
-      0x00000000: unknown
-trim:
-  args:
-    delimiter:
-      - 0x00
-text:
-  args:
-    delimiter:
+types:
+  int:
+    read: 2
+  short:
+    function:
+      name: int
+  colour:
+    read: 3
+  date:
+    read: 4
+    function:
+      args:
+        annotation:
+          0xffffffff: defined
+          0x00000000: unknown
+  trim:
+    read: 26
+    function:
+      args:
+        delimiter:
+        - 0x00
+  text:
+    read:
       - 0x0d
-    split:
-      - 0x0b
-      - 0x0b
-comment:
-  function: text
-  args:
-    delimiter:
+    function:
+      args:
+        split:
+          - 0x0b
+          - 0x0b
+  comment:
+    read:
       - 0x0d
-    split:
-      - 0x09
-      - 0x03
-proband:
-  size: 1
-  function: map
-  args:
-    annotation:
-      0x00: not_a_proband
-      0x01: above_left
-      0x02: above_right
-      0x03: below_left
-      0x04: below_right
-      0x05: left
-      0x06: right
-sex:
-  size: 1
-  function: map
-  args:
-    annotation:
-      0x00: male
-      0x01: female
-      0x02: unknown
-multiple_pregnancies:
-  size: 1
-  function: map
-  args:
-    annotation:
-      0x00: singleton
-      0x01: monozygotic_twins
-      0x02: dizygotic_twins
-      0x03: twin_type_unknown
-      0x04: triplet
-      0x05: quadruplet
-      0x06: quintuplet
-      0x07: sextuplet
-adoption_type:
-  size: 1
-  function: map
-  args:
-    annotation:
-      0x00: adopted_into_family
-      0x01: not_adopted
-      0x02: possibly_adopted_into_family
-      0x03: adopted_out_of_family
-annotation_1:
-  size: 1
-  function: map
-  args:
-    annotation:
-      0x00: none
-      0x01: p
-      0x02: sab
-      0x03: top
-      0x04: sb
-      0x0b: bar
-annotation_2:
-  size: 1
-  function: map
-  args:
-    annotation:
-      0x00: none
-      0x01: affected
-pattern:
-  size: 1
-  function: map
-  args:
-    annotation:
-      0x00: horizontal
-      0x01: vertical
-      0x02: slanted_back
-      0x03: slanted_forward
-      0x04: grid
-      0x05: diagonal_grid
-      0xff: fill
-genetic_symbol:
-  size: 1
-  function: map
-  args:
-    annotation:
-      0x00: clear
-      0x01: unaffected
-      0x02: affected
-      0x03: carrier
-      0x04: possibly_affected
-      0x05: q1
-      0x06: q2
-      0x07: q3
-      0x08: q4
-      0x09: heterozygous
-      0x0a: q1_q3
-      0x0b: q1_q4
-      0x0c: q2_q3
-      0x0d: q2_q4
-      0x0e: q3_q4
-      0x0f: q1_q2_q3
-      0x10: q1_q2_q4
-      0x11: q1_q3_q4
-      0x12: q2_q3_q4
-additional_symbol:
-  size: 1
-  function: map
-  args:
-    default: additional_symbol
-    annotation:
-      0x00: cross
-      0x01: plus
-      0x02: minus
-      0x03: o
-individual:
-  size: 1
-  function: flags
-  args:
-    default: individual
-    annotation:
-      0x01: blood
-      0x02: dna
-      0x04: loop_breakpoint
-      0x08: hide_info
-      0x10: committed_suicide
-      0x20: cells
-relationship:
-  size: 1
-  function: flags
-  args:
-    default: relationship
-    annotation:
-      0x01: informal
-      0x02: consanguineous
-      0x04: separated
-      0x08: divorced
-sample:
-  size: 1
-  function: flags
-  args:
-    default: sample
-    annotation:
-      0x01: sample_required
+    function:
+      name: text
+      args:
+        split:
+          - 0x09
+          - 0x03
+  proband:
+    function:
+      name: map
+      args:
+        annotation:
+          0x00: not_a_proband
+          0x01: above_left
+          0x02: above_right
+          0x03: below_left
+          0x04: below_right
+          0x05: left
+          0x06: right
+  sex:
+    function:
+      name: map
+      args:
+        annotation:
+          0x00: male
+          0x01: female
+          0x02: unknown
+  multiple_pregnancies:
+    function:
+      name: map
+      args:
+        annotation:
+          0x00: singleton
+          0x01: monozygotic_twins
+          0x02: dizygotic_twins
+          0x03: twin_type_unknown
+          0x04: triplet
+          0x05: quadruplet
+          0x06: quintuplet
+          0x07: sextuplet
+  adoption_type:
+    function:
+      name: map
+      args:
+        annotation:
+          0x00: adopted_into_family
+          0x01: not_adopted
+          0x02: possibly_adopted_into_family
+          0x03: adopted_out_of_family
+  annotation_1:
+    function:
+      name: map
+      args:
+        annotation:
+          0x00: none
+          0x01: p
+          0x02: sab
+          0x03: top
+          0x04: sb
+          0x0b: bar
+  annotation_2:
+    function:
+      name: map
+      args:
+        annotation:
+          0x00: none
+          0x01: affected
+  pattern:
+    function:
+      name: map
+      args:
+        annotation:
+          0x00: horizontal
+          0x01: vertical
+          0x02: slanted_back
+          0x03: slanted_forward
+          0x04: grid
+          0x05: diagonal_grid
+          0xff: fill
+  genetic_symbol:
+    function:
+      name: map
+      args:
+        annotation:
+          0x00: clear
+          0x01: unaffected
+          0x02: affected
+          0x03: carrier
+          0x04: possibly_affected
+          0x05: q1
+          0x06: q2
+          0x07: q3
+          0x08: q4
+          0x09: heterozygous
+          0x0a: q1_q3
+          0x0b: q1_q4
+          0x0c: q2_q3
+          0x0d: q2_q4
+          0x0e: q3_q4
+          0x0f: q1_q2_q3
+          0x10: q1_q2_q4
+          0x11: q1_q3_q4
+          0x12: q2_q3_q4
+  additional_symbol:
+    function:
+      name: map
+      args:
+        default: additional_symbol
+        annotation:
+          0x00: cross
+          0x01: plus
+          0x02: minus
+          0x03: o
+  individual:
+    function:
+      name: flags
+      args:
+        default: individual
+        annotation:
+          0x01: blood
+          0x02: dna
+          0x04: loop_breakpoint
+          0x08: hide_info
+          0x10: committed_suicide
+          0x20: cells
+  relationship:
+    function:
+      name: flags
+      args:
+        default: relationship
+        annotation:
+          0x01: informal
+          0x02: consanguineous
+          0x04: separated
+          0x08: divorced
+  sample:
+    function:
+      name: flags
+      args:
+        default: sample
+        annotation:
+          0x01: sample_required
