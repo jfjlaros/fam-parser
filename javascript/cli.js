@@ -3,8 +3,9 @@
 'use strict';
 
 var fs = require('fs'),
-    path = require('path'),
-    FamParser = require('./index');
+    path = require('path');
+
+var FamParser = require('./index');
 
 var main = function(filename) {
   var FP = new FamParser(fs.readFileSync(filename).toString('binary'));

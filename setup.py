@@ -26,11 +26,11 @@ for line in open(os.path.join('python', '__init__.py')):
         value = value.strip('\'"')
     distmeta[field] = value
 
-try:
-    with open('README.md') as readme:
-        long_description = readme.read()
-except IOError:
-    long_description = 'See ' + distmeta['__homepage__']
+#try:
+#    with open('README.md') as readme:
+#        long_description = readme.read()
+#except IOError:
+long_description = 'See ' + distmeta['__homepage__']
 
 setup(
     name='fam-parser',
@@ -40,13 +40,10 @@ setup(
     author=distmeta['__author__'],
     author_email=distmeta['__contact__'],
     url=distmeta['__homepage__'],
-    data_files=[
-        'types.yml',
-        'structure.yml'
-    ],
     license='MIT License',
     platforms=['any'],
     packages=['fam_parser'],
+    data_files=['structure.yml', 'types.yml'],
     install_requires=requires,
     package_dir={'fam_parser': 'python'},
     entry_points={

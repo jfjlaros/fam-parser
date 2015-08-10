@@ -8,8 +8,8 @@ Licensed under the MIT license, see the LICENSE file.
 """
 
 
-__version_info__ = ('0', '0', '3', 'dev')
-__date__ = '27 May 2015'
+__version_info__ = ('0', '0', '5')
+__date__ = '7 Aug 2015'
 
 
 __version__ = '.'.join(__version_info__)
