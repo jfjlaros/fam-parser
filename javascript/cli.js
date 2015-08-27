@@ -8,9 +8,9 @@ var fs = require('fs'),
 var FamParser = require('./index');
 
 var main = function(filename) {
-  var FP = new FamParser(fs.readFileSync(filename).toString('binary'));
+  var parser = new FamParser(fs.readFileSync(filename).toString('binary'));
 
-  FP.dump();
+  parser.dump();
 };
 
 var exitCode = main(
