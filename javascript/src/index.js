@@ -6,20 +6,20 @@ FAM parser.
 (C) 2015 Jeroen F.J. Laros <J.F.J.Laros@lumc.nl>
 */
 
-var fs = require('fs');
+//var fs = require('fs');
 
 var BinParser = require('bin-parser');
 
 function FamParser(fileContent) {
   var parser = new BinParser.BinParser(fileContent,
-        fs.readFileSync('structure.yml').toString('binary'), // FIXME: webpack
-        fs.readFileSync('types.yml').toString('binary')),    // FIXME: webpack
+        //fs.readFileSync('structure.yml').toString('binary'), // FIXME: webpack
+        //fs.readFileSync('types.yml').toString('binary')),    // FIXME: webpack
+        require('../../structure.yml'), require('../../types.yml')),
       items = ['name', 'id_number', 'comments', 'members'],
       parsed = parser.parsed,
       relationships = {},
       spouses,
       members,
-      item,
       keys,
       i,
       j;

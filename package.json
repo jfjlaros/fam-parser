@@ -3,13 +3,10 @@
   "version": "0.0.6",
   "description": "FAM file parser",
   "homepage": "https://git.lumc.nl/pedigree/fam-parser",
-  "files": [
-    "fields.yml",
-    "structure.yml"
-  ],
-  "main": "javascript/index.js",
-  "bin": "javascript/cli.js",
+  "main": "javascript/dist/index.js",
+  "bin": "./javascript/bin/cli.js",
   "scripts": {
+    "dist": "nodejs node_modules/webpack/bin/webpack.js --progress --color -p --module-bind 'yml=json!yaml' --output-library-target commonjs2 ./javascript/src/index.js javascript/dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -27,7 +24,12 @@
   },
   "license": "MIT",
   "dependencies": {
-    "js-yaml": "^3.3.1",
-    "require-file": "^1.0.2"
+    "bin-parser": "^0.0.5",
+    "js-yaml": "^3.3.1"
+  },
+  "devDependencies": {
+    "json-loader": "~0.5.2",
+    "webpack": "~1.10.1",
+    "yaml-loader": "~0.1.0"
   }
 }

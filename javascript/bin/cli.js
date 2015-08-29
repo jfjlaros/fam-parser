@@ -5,7 +5,7 @@
 var fs = require('fs'),
     path = require('path');
 
-var FamParser = require('./index');
+var FamParser = require('../dist/index');
 
 var main = function(filename) {
   var parser = new FamParser(fs.readFileSync(filename).toString('binary'));
