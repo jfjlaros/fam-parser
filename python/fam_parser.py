@@ -21,19 +21,22 @@ class FamParser(BinParser):
         self._parsed = self.parsed
         self.parsed = {
             'family': {
-                'relationships': {}
+                'relationships': []
             },
             'metadata': {}
         }
 
         # Extract the relationships and put them in the family structure.
+        relationships = {}
         for member in self._parsed['members']:
             spouses = member.pop('spouses')
             for spouse in spouses:
-                members = [member['id'], spouse.pop('id')]
+                members = sorted([member['id'], spouse.pop('id')])
                 spouse['member_ids'] = members
-                self.parsed['family']['relationships'][
-                    '{}_{}'.format(*sorted(members))] = spouse
+                relationships['{}_{}'.format(*members)] = spouse
+
+        for item in sorted(relationships):
+            self.parsed['family']['relationships'].append(relationships[item])
 
         # Put all family related data in the family structure.
         for item in ['name', 'id_number', 'comments', 'members']:
@@ -41,7 +44,7 @@ class FamParser(BinParser):
 
         # Annotate the genetic symbols.
         for index, symbol in enumerate(self._parsed['genetic_symbols']):
-            symbol['name'] = self._types[
+            symbol['name'] = self.types[
                 'genetic_symbol']['function']['args']['annotation'][index]
 
         self.parsed['metadata']['genetic_symbols'] = self._parsed.pop(
@@ -49,7 +52,7 @@ class FamParser(BinParser):
 
         # Annotate the additional symbols.
         for index, symbol in enumerate(self._parsed['additional_symbols']):
-            symbol['name'] = self._types[
+            symbol['name'] = self.types[
                 'additional_symbol']['function']['args']['annotation'][index]
 
         # Merge the additional and custom symbols.
