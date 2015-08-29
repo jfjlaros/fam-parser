@@ -43,10 +43,8 @@ setup(
     license='MIT License',
     platforms=['any'],
     packages=['fam_parser'],
-    data_files=['structure.yml', 'types.yml'],
     install_requires=requires,
     package_dir={'fam_parser': 'python'},
-    entry_points={
-        'console_scripts': ['fam_parser = fam_parser.cli:main']
-    }
+    package_data={'fam_parser': ['structure.yml', 'types.yml']},
+    entry_points={'console_scripts': ['fam_parser = fam_parser.cli:main']}
 )

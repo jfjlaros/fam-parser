@@ -14,8 +14,8 @@ from bin_parser import BinParser
 class FamParser(BinParser):
     def __init__(self, input_handle, experimental=False, debug=0):
         super(FamParser, self).__init__(input_handle,
-            open(os.path.join(os.path.dirname(__file__), '../structure.yml')),
-            open(os.path.join(os.path.dirname(__file__), '../types.yml')),
+            open(os.path.join(os.path.dirname(__file__), 'structure.yml')),
+            open(os.path.join(os.path.dirname(__file__), 'types.yml')),
             experimental=experimental, debug=debug)
 
         self._parsed = self.parsed

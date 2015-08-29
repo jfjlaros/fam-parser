@@ -8,7 +8,7 @@ Licensed under the MIT license, see the LICENSE file.
 """
 
 
-__version_info__ = ('0', '0', '6')
+__version_info__ = ('0', '0', '7')
 __date__ = '29 Aug 2015'
 
 
