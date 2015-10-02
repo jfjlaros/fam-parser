@@ -127,44 +127,24 @@
     - name: multiple_pregnancies
       type: multiple_pregnancies
     - name:
-      read: 3
+      read: 1
     - name: crossover
+      for: 2
       structure:
-        - name: allele_1
-          structure:
-            - name: co
-              while:
-                operands:
-                  - crossover_delimiter
-                  - separator
-                operator: ne
-                term: crossover_term
-              structure:
-                - name: separator
-                  type: short
-                - name:
-                  read: 11
         - name:
-          read: 9
-    - name: unknown1
-      type: raw
-      read: 2
-    - name: crossover
-      structure:
-        - name: allele_2
+          read: 2
+        - name: allele
+          while:
+            operands:
+              - crossover_delimiter
+              - separator
+            operator: ne
+            term: crossover_term
           structure:
-            - name: co
-              while:
-                operands:
-                  - crossover_delimiter
-                  - separator
-                operator: ne
-                term: crossover_term
-              structure:
-                - name: separator
-                  type: short
-                - name:
-                  read: 11
+            - name: separator
+              type: short
+            - name:
+              read: 11
         - name:
           read: 9
     - name:

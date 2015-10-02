@@ -149,8 +149,8 @@ class TestParser(object):
 
     def test_crossover_1(self):
         assert self.parsed['crossover']['members'][0][
-            'crossover']['allele_1']['co'][5]['separator'] == 0xff
+            'crossover'][0]['allele'][5]['separator'] == 0xff
 
     def test_crossover_2(self):
         assert self.parsed['crossover']['members'][0][
-            'crossover']['allele_2']['co'][3]['separator'] == 0xff
+            'crossover'][1]['allele'][3]['separator'] == 0xff
