@@ -56,14 +56,8 @@
     - name: forenames
     - name: known_as
     - name: maiden_name
-    - name: ethnicity
-      structure:
-        - name: self
-        - name: m_g_mother
-        - name: m_g_father
-        - name: p_g_mother
-        - name: p_g_father
-    - name: origins
+    - name: origins # Ethnicity, origins.
+      for: 2
       structure:
         - name: self
         - name: m_g_mother
