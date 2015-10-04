@@ -1,13 +1,13 @@
 {
   "name": "fam-parser",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "description": "FAM file parser",
   "homepage": "https://git.lumc.nl/pedigree/fam-parser",
   "files": ["javascript"],
   "main": "javascript/dist/index.js",
   "bin": "javascript/bin/cli.js",
   "scripts": {
-    "dist": "webpack --progress --color -p --module-bind 'yml=json!yaml' --output-library-target commonjs2 javascript/src/index.js javascript/dist/index.js",
+    "dist": "webpack --progress --color -p --module-bind 'yml=json!yaml' --module-bind 'json=json' --output-library-target commonjs2 javascript/src/index.js javascript/dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
