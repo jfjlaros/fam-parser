@@ -14,6 +14,6 @@ test_cli() {
   rm $py $js
 }
 
-for filename in data/*.fam data/*.FAM; do
+for filename in data/*.fam; do
   test_cli $filename
 done

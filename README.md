@@ -7,7 +7,7 @@ A library for parsing FAM files from Python or Javascript.
 
 Installation:
 
-    pip install -e 'git+https://git.lumc.nl/nested/fam-parser.git#egg=fam_parser'
+    pip install fam-parser
 
 Use as a library:
 
@@ -32,7 +32,12 @@ installation:
 
 Installation:
 
-    npm install 'git+https://git.lumc.nl/nested/fam-parser.git'
+    npm install fam-parser
+
+Installation from source:
+
+    npm install
+    npm run dist
 
 Use as a library:
 

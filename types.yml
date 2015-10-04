@@ -20,9 +20,11 @@ types:
   trim:
     read: 26
     function:
+      name: text
       args:
-        delimiter:
-        - 0x00
+        trim:
+          - 0x00
+        encoding: latin1
   text:
     read:
       - 0x0d
@@ -31,6 +33,7 @@ types:
         split:
           - 0x0b
           - 0x0b
+        encoding: latin1
   comment:
     read:
       - 0x0d
@@ -40,6 +43,7 @@ types:
         split:
           - 0x09
           - 0x03
+        encoding: latin1
   proband:
     function:
       name: map
