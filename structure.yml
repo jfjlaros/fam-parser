@@ -7,7 +7,7 @@
 - name: number_of_members
   type: int
 - name: # last_internal_id
-  read: 2
+  size: 2
 - name: disease_loci
   for: 7
   structure:
@@ -15,7 +15,7 @@
     - name: colour
       type: colour
     - name:
-      read: 1
+      size: 1
     - name: pattern
       type: pattern
 - name: comments
@@ -25,7 +25,7 @@
 - name: last_updated
   type: date
 - name:
-  read: 5
+  size: 5
 - name: quantitative_value_loci
   for: 7
   structure:
@@ -33,7 +33,7 @@
 - name: selected_id
   type: int
 - name:
-  read: 7
+  size: 7
 - name: markers
   while:
     operands:
@@ -45,9 +45,9 @@
     - name: separator
       type: short
     - name:
-      read: 439
+      size: 439
 - name:
-  read: 9
+  size: 9
 - name: members
   for: number_of_members
   structure:
@@ -107,7 +107,7 @@
     - name: genetic_symbols
       type: short
     - name:
-      read: 1
+      size: 1
     - name: flags
       type: individual
     - name: proband
@@ -121,12 +121,12 @@
     - name: multiple_pregnancies
       type: multiple_pregnancies
     - name:
-      read: 1
+      size: 1
     - name: crossover
       for: 2
       structure:
         - name:
-          read: 2
+          size: 2
         - name: allele
           while:
             operands:
@@ -138,16 +138,16 @@
             - name: separator
               type: short
             - name:
-              read: 11
+              size: 11
         - name:
-          read: 9
+          size: 9
     - name:
-      read: 12
+      size: 12
     - name: unknown_list
       for: 7
       structure:
         - name:
-          read: 24
+          size: 24
     - name: annotation_2
       type: annotation_2
     - name: additional_symbols
@@ -171,20 +171,20 @@
       type: sample
     - name: sample_number
     - name: # colour
-      read: 3
+      size: 3
     - name:
-      read: 17
+      size: 17
     - name: # pattern
-      read: 2
+      size: 2
 - name: number_of_unknown_data
   type: int
 - name:
-  read: 1 # FIXME: 1 should be default.
+  size: 1 # FIXME: 1 should be default.
 - name: unknown_data
   for: number_of_unknown_data
   structure:
     - name:
-      read: 12
+      size: 12
 - name: number_of_custom_descriptions
   type: int
 - name: genetic_symbols
@@ -201,17 +201,17 @@
     - name: name
     - name: value
 - name:
-  read: 14
+  size: 14
 - name: zoom
   type: int
 - name: unknown_1 # Zoom.
   type: raw
-  read: 4
+  size: 4
 - name: unknown_2 # Zoom.
   type: raw
-  read: 4
+  size: 4
 - name:
-  read: 20
+  size: 20
 - name: number_of_text_fields
   type: int
 # TODO: x and y coordinates have more digits.
@@ -220,14 +220,14 @@
   structure:
     - name: comment
     - name:
-      read: 54
+      size: 54
     - name: x_coordinate
       type: short
     - name:
-      read: 3
+      size: 3
     - name: y_coordinate
       type: short
     - name:
-      read: 7
+      size: 7
 - name: eof_marker
   type: trim
