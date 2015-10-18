@@ -49,7 +49,8 @@ class TestParser(object):
         assert len(self.parsed['example']['custom_symbols']) == 1
 
     def test_symbols_4(self):
-        assert (self.parsed['example']['custom_symbols'][0]['name'] ==
+        assert (
+            self.parsed['example']['custom_symbols'][0]['name'] ==
             'custom symbol')
 
     def test_symbols_5(self):
@@ -68,12 +69,13 @@ class TestParser(object):
         assert len(self.parsed['example']['disease_loci']) == 7
 
     def test_family_disease_loci_2(self):
-        assert (self.parsed['example']['disease_loci'][3]['pattern'] ==
+        assert (
+            self.parsed['example']['disease_loci'][3]['pattern'] ==
             'slanted_forward')
 
     def test_family_disease_loci_3(self):
-        assert (self.parsed['example']['disease_loci'][3]['colour'] ==
-            '0x0000ff')
+        assert (
+            self.parsed['example']['disease_loci'][3]['colour'] == '0x0000ff')
 
     def test_family_quantitative_value_loci(self):
         assert len(self.parsed['example']['quantitative_value_loci']) == 7
@@ -88,8 +90,8 @@ class TestParser(object):
         assert self.parsed['example']['members'][0]['individual_id'] == '1'
 
     def test_member_forenames(self):
-        assert (self.parsed['example']['members'][0]['forenames'] ==
-            'Name1 Name2')
+        assert (
+            self.parsed['example']['members'][0]['forenames'] == 'Name1 Name2')
 
     def test_member_surname_1(self):
         assert self.parsed['example']['members'][0]['surname'] == 'Surname'
@@ -98,19 +100,21 @@ class TestParser(object):
         assert self.parsed['example']['members'][1]['surname'] == 'Surname'
 
     def test_member_age_gestation(self):
-        assert (self.parsed['example']['members'][0]['age_gestation'] ==
+        assert (
+            self.parsed['example']['members'][0]['age_gestation'] ==
             'A/G text')
 
     def test_member_date_of_birth(self):
-        assert (self.parsed['example']['members'][0]['date_of_birth'] ==
-            '1111001')
+        assert (
+            self.parsed['example']['members'][0]['date_of_birth'] == '1111001')
 
     def test_member_date_of_death(self):
-        assert (self.parsed['example']['members'][0]['date_of_death'] ==
-            '2222033')
+        assert (
+            self.parsed['example']['members'][0]['date_of_death'] == '2222033')
 
     def test_member_adoption_type(self):
-        assert (self.parsed['example']['members'][0]['adoption_type'] ==
+        assert (
+            self.parsed['example']['members'][0]['adoption_type'] ==
             'not_adopted')
 
     def test_member_gender(self):
