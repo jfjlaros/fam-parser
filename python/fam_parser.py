@@ -4,8 +4,6 @@ FAM parser.
 
 (C) 2015 Jeroen F.J. Laros <J.F.J.Laros@lumc.nl>
 """
-
-
 import os
 
 from bin_parser import BinReader
