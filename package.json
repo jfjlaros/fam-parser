@@ -1,6 +1,6 @@
 {
   "name": "fam-parser",
-  "version": "0.0.14",
+  "version": "0.0.16",
   "description": "FAM file parser",
   "homepage": "https://git.lumc.nl/pedigree/fam-parser",
   "files": ["javascript"],
