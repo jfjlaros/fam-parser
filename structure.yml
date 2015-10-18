@@ -15,7 +15,6 @@
     - name: colour
       type: colour
     - name:
-      size: 1
     - name: pattern
       type: pattern
 - name: comments
@@ -107,7 +106,6 @@
     - name: genetic_symbols
       type: short
     - name:
-      size: 1
     - name: flags
       type: individual
     - name: proband
@@ -121,7 +119,6 @@
     - name: multiple_pregnancies
       type: multiple_pregnancies
     - name:
-      size: 1
     - name: crossover
       for: 2
       structure:
@@ -179,7 +176,6 @@
 - name: number_of_unknown_data
   type: int
 - name:
-  size: 1 # FIXME: 1 should be default.
 - name: unknown_data
   for: number_of_unknown_data
   structure:
