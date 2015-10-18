@@ -144,7 +144,6 @@ types:
     function:
       name: map
       args:
-        default: additional_symbol
         annotation:
           0x00: cross
           0x01: plus
@@ -154,7 +153,6 @@ types:
     function:
       name: flags
       args:
-        default: individual
         annotation:
           0x01: blood
           0x02: dna
@@ -166,7 +164,6 @@ types:
     function:
       name: flags
       args:
-        default: relationship
         annotation:
           0x01: informal
           0x02: consanguineous
@@ -176,6 +173,5 @@ types:
     function:
       name: flags
       args:
-        default: sample
         annotation:
           0x01: sample_required

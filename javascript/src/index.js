@@ -11,8 +11,9 @@ FAM parser.
 var BinParser = require('bin-parser');
 
 function FamParser(fileContent) {
-  var parser = new BinParser.BinParser(fileContent,
-        require('../../structure.yml'), require('../../types.yml')),
+  var parser = new BinParser.BinReader(
+        fileContent, require('../../structure.yml'),
+        require('../../types.yml'), undefined, true),
       items = ['name', 'id_number', 'comments', 'members'],
       parsed = parser.parsed,
       relationships = {},

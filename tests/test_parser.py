@@ -3,7 +3,7 @@ Tests for the python.fam_parser module.
 """
 
 
-from bin_parser import BinParser
+from bin_parser import BinReader
 
 
 class TestParser(object):
@@ -13,15 +13,15 @@ class TestParser(object):
     def setup(self):
         self.parsed = {}
 
-        parser = BinParser(
+        parser = BinReader(
             open('data/example.fam'), open('structure.yml'), open('types.yml'))
         self.parsed['example'] = parser.parsed
 
-        parser = BinParser(
+        parser = BinReader(
             open('data/markers.fam'), open('structure.yml'), open('types.yml'))
         self.parsed['markers'] = parser.parsed
 
-        parser = BinParser(
+        parser = BinReader(
             open('data/crossover.fam'),
             open('structure.yml'),
             open('types.yml'))
@@ -135,14 +135,16 @@ class TestParser(object):
         assert self.parsed['example']['members'][7]['spouses'][1]['id'] == 10
 
     def test_spouse_3(self):
-        assert self.parsed['example']['members'][5]['spouses'][0]['divorced']
+        assert self.parsed['example']['members'][5][
+            'spouses'][0]['flags']['divorced']
 
     def test_spouse_4(self):
         assert self.parsed['example']['members'][7][
-            'spouses'][0]['consanguineous']
+            'spouses'][0]['flags']['consanguineous']
 
     def test_spouse_5(self):
-        assert self.parsed['example']['members'][7]['spouses'][0]['informal']
+        assert self.parsed['example']['members'][7][
+            'spouses'][0]['flags']['informal']
 
     def test_markers(self):
         assert self.parsed['markers']['markers'][1]['separator'] == 0x00
