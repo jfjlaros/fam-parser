@@ -4,11 +4,12 @@
 
 var fs = require('fs'),
     path = require('path');
+    Buffer = require('buffer-extend-split');
 
 var FamParser = require('../dist/index');
 
 var main = function(filename) {
-  var parser = new FamParser(fs.readFileSync(filename).toString('binary'));
+  var parser = new FamParser(fs.readFileSync(filename));
 
   parser.dump();
 };
