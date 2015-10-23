@@ -4,7 +4,7 @@
 
 var fs = require('fs'),
     path = require('path');
-    Buffer = require('buffer-extend-split');
+    //Buffer = require('buffer-extend-split');
 
 var FamParser = require('../dist/index');
 
