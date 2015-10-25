@@ -7,7 +7,7 @@
   "main": "javascript/dist/index.js",
   "bin": "javascript/bin/cli.js",
   "scripts": {
-    "dist": "webpack --progress --color -p --module-bind 'yml=json!yaml' --module-bind 'json=json' --output-library-target commonjs2 javascript/src/index.js javascript/dist/index.js",
+    "dist": "webpack --progress --color",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
