@@ -1,2 +1,2 @@
 pytest
-bin-parser>=0.0.10
+bin-parser>=0.0.12

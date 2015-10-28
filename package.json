@@ -1,6 +1,6 @@
 {
   "name": "fam-parser",
-  "version": "0.0.16",
+  "version": "0.0.17",
   "description": "FAM file parser",
   "homepage": "https://git.lumc.nl/pedigree/fam-parser",
   "files": ["javascript"],
@@ -25,7 +25,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "bin-parser": "^0.0.11"
+    "bin-parser": "^0.0.12"
   },
   "devDependencies": {
     "json-loader": "~0.5.2",
