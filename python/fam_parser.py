@@ -6,6 +6,8 @@ FAM parser.
 """
 import os
 
+import yaml
+
 from bin_parser import BinReader
 
 
@@ -13,8 +15,10 @@ class FamParser(BinReader):
     def __init__(self, input_handle):
         super(FamParser, self).__init__(
             input_handle,
-            open(os.path.join(os.path.dirname(__file__), 'structure.yml')),
-            open(os.path.join(os.path.dirname(__file__), 'types.yml')),
+            yaml.safe_load(open(
+                os.path.join(os.path.dirname(__file__), 'structure.yml'))),
+            yaml.safe_load(open(
+                os.path.join(os.path.dirname(__file__), 'types.yml'))),
             prune=True)
 
         self._parsed = self.parsed

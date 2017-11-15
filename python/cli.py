@@ -1,7 +1,12 @@
+#!/usr/bin/env python
+"""
+Command line interface for the FAM parser.
+"""
 import argparse
 import os
 
 import bin_parser
+import yaml
 
 from . import usage, version
 from .fam_parser import FamParser
@@ -14,8 +19,9 @@ def fam_parser(input_handle, output_handle):
     :arg stream input_handle: Open readable handle to a FAM file.
     :arg stream output_handle: Open writable handle.
     """
-    parser = FamParser(input_handle)
-    parser.write(output_handle)
+    parser = FamParser(input_handle.read())
+    yaml.safe_dump(
+        parser.parsed, output_handle, width=76, default_flow_style=False)
 
 
 def main():

@@ -104,7 +104,7 @@
     - name: adoption_type
       type: adoption_type
     - name: genetic_symbols
-      type: short
+      type: genetic_symbol
     - name:
     - name: flags
       type: individual

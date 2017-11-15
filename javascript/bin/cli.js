@@ -2,26 +2,26 @@
 
 'use strict';
 
+/*
+Command line interface for the FAM parser.
+*/
 var fs = require('fs'),
-    path = require('path');
-    //Buffer = require('buffer-extend-split');
+    path = require('path'),
+    yaml = require('js-yaml');
 
 var FamParser = require('../dist/index');
 
-var main = function(filename) {
-  var parser = new FamParser(fs.readFileSync(filename));
+function main(inputFile, outputFile) {
+  var parser = new FamParser(fs.readFileSync(inputFile));
 
-  parser.dump();
-};
+  fs.writeFileSync(outputFile, '---\n');
+  fs.appendFileSync(outputFile, yaml.dump(parser.parsed));
+}
 
-var exitCode = main(
-  path.resolve(process.cwd(), process.argv[2])
-);
-
-/*
-Wait for the stdout buffer to drain.
-See https://github.com/eslint/eslint/issues/317
-*/
+// Wait for the stdout buffer to drain, see
+// https://github.com/eslint/eslint/issues/317
 process.on('exit', function() {
-  process.reallyExit(exitCode);
+  process.reallyExit(main(
+    path.resolve(process.cwd(), process.argv[2]),
+    path.resolve(process.cwd(), process.argv[3])));
 });

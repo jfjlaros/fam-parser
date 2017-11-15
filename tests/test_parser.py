@@ -1,7 +1,7 @@
 """
 Tests for the python.fam_parser module.
 """
-
+import yaml
 
 from bin_parser import BinReader
 
@@ -14,17 +14,21 @@ class TestParser(object):
         self.parsed = {}
 
         parser = BinReader(
-            open('data/example.fam'), open('structure.yml'), open('types.yml'))
+            open('data/example.fam').read(),
+            yaml.safe_load(open('structure.yml')),
+            yaml.safe_load(open('types.yml')))
         self.parsed['example'] = parser.parsed
 
         parser = BinReader(
-            open('data/markers.fam'), open('structure.yml'), open('types.yml'))
+            open('data/markers.fam').read(),
+            yaml.safe_load(open('structure.yml')),
+            yaml.safe_load(open('types.yml')))
         self.parsed['markers'] = parser.parsed
 
         parser = BinReader(
-            open('data/crossover.fam'),
-            open('structure.yml'),
-            open('types.yml'))
+            open('data/crossover.fam').read(),
+            yaml.safe_load(open('structure.yml')),
+            yaml.safe_load(open('types.yml')))
         self.parsed['crossover'] = parser.parsed
 
     def test_source(self):
