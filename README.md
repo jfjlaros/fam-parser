@@ -11,12 +11,10 @@ Installation:
 
 Use as a library:
 
-    import sys
     from fam_parser import FamParser
 
-    parser = FamParser()
-    parser.read(open(example.fam'))
-    parser.write(sys.stdout)
+    parser = FamParser(open('example.fam', 'rb').read())
+    print(parser.parsed)
 
 Command line invocation:
 

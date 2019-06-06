@@ -1,2 +1,2 @@
 pytest
-bin-parser==0.0.13
+bin-parser==1.0.1

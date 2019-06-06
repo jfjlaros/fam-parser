@@ -1,5 +1,4 @@
-"""
-FAM parser.
+"""FAM parser.
 
 
 (C) 2015 Jeroen F.J. Laros <J.F.J.Laros@lumc.nl>
@@ -24,10 +23,8 @@ class FamParser(BinReader):
         self._parsed = self.parsed
         self.parsed = {
             'family': {
-                'relationships': []
-            },
-            'metadata': {}
-        }
+                'relationships': []},
+            'metadata': {}}
 
         # Extract the relationships and put them in the family structure.
         relationships = {}
@@ -48,7 +45,7 @@ class FamParser(BinReader):
         # Annotate the genetic symbols.
         for index, symbol in enumerate(self._parsed['genetic_symbols']):
             symbol['name'] = self.types[
-                'genetic_symbol']['function']['args']['annotation'][index]
+                't_genetic_symbol']['function']['args']['annotation'][index]
 
         self.parsed['metadata']['genetic_symbols'] = self._parsed.pop(
             'genetic_symbols')
@@ -56,7 +53,7 @@ class FamParser(BinReader):
         # Annotate the additional symbols.
         for index, symbol in enumerate(self._parsed['additional_symbols']):
             symbol['name'] = self.types[
-                'additional_symbol']['function']['args']['annotation'][index]
+                't_additional_symbol']['function']['args']['annotation'][index]
 
         # Merge the additional and custom symbols.
         self.parsed['metadata']['additional_symbols'] = self._parsed.pop(

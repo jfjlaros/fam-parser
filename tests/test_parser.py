@@ -14,21 +14,21 @@ class TestParser(object):
         self.parsed = {}
 
         parser = BinReader(
-            open('data/example.fam').read(),
-            yaml.safe_load(open('structure.yml')),
-            yaml.safe_load(open('types.yml')))
+            open('data/example.fam', 'rb').read(),
+            yaml.safe_load(open('structure.yml', 'rb')),
+            yaml.safe_load(open('types.yml', 'rb')))
         self.parsed['example'] = parser.parsed
 
         parser = BinReader(
-            open('data/markers.fam').read(),
-            yaml.safe_load(open('structure.yml')),
-            yaml.safe_load(open('types.yml')))
+            open('data/markers.fam', 'rb').read(),
+            yaml.safe_load(open('structure.yml', 'rb')),
+            yaml.safe_load(open('types.yml', 'rb')))
         self.parsed['markers'] = parser.parsed
 
         parser = BinReader(
-            open('data/crossover.fam').read(),
-            yaml.safe_load(open('structure.yml')),
-            yaml.safe_load(open('types.yml')))
+            open('data/crossover.fam', 'rb').read(),
+            yaml.safe_load(open('structure.yml', 'rb')),
+            yaml.safe_load(open('types.yml', 'rb')))
         self.parsed['crossover'] = parser.parsed
 
     def test_source(self):
@@ -38,10 +38,10 @@ class TestParser(object):
         assert self.parsed['example']['family_drawn_by'] == 'Jeroen F.J. Laros'
 
     def test_creation_date(self):
-        assert self.parsed['example']['creation_date'] == '1111001'
+        assert self.parsed['example']['creation_date'] == 1111001
 
     def test_modification_date(self):
-        assert self.parsed['example']['last_updated'] == '2222033'
+        assert self.parsed['example']['last_updated'] == 2222033
 
     def test_symbols_1(self):
         assert len(self.parsed['example']['genetic_symbols']) == 19
@@ -79,7 +79,8 @@ class TestParser(object):
 
     def test_family_disease_loci_3(self):
         assert (
-            self.parsed['example']['disease_loci'][3]['colour'] == '0x0000ff')
+            self.parsed['example']['disease_loci'][3]['colour'] ==
+            {'r': 0xff, 'g': 0x00, 'b': 0x00})
 
     def test_family_quantitative_value_loci(self):
         assert len(self.parsed['example']['quantitative_value_loci']) == 7
@@ -110,11 +111,11 @@ class TestParser(object):
 
     def test_member_date_of_birth(self):
         assert (
-            self.parsed['example']['members'][0]['date_of_birth'] == '1111001')
+            self.parsed['example']['members'][0]['date_of_birth'] == 1111001)
 
     def test_member_date_of_death(self):
         assert (
-            self.parsed['example']['members'][0]['date_of_death'] == '2222033')
+            self.parsed['example']['members'][0]['date_of_death'] == 2222033)
 
     def test_member_adoption_type(self):
         assert (

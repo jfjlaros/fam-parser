@@ -1,7 +1,4 @@
-#!/usr/bin/env python
-"""
-Command line interface for the FAM parser.
-"""
+"""Command line interface for the FAM parser."""
 import argparse
 import os
 
@@ -13,8 +10,7 @@ from .fam_parser import FamParser
 
 
 def fam_parser(input_handle, output_handle):
-    """
-    Main entry point.
+    """FAM parser.
 
     :arg stream input_handle: Open readable handle to a FAM file.
     :arg stream output_handle: Open writable handle.
@@ -25,15 +21,13 @@ def fam_parser(input_handle, output_handle):
 
 
 def main():
-    """
-    Command line argument parsing.
-    """
+    """Main entry point."""
     parser = argparse.ArgumentParser(
         description=usage[0], epilog=usage[1],
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
     parser.add_argument(
-        'input_handle', type=argparse.FileType('r'),
+        'input_handle', type=argparse.FileType('rb'),
         help='input file in FAM format')
     parser.add_argument(
         'output_handle', type=argparse.FileType('w'), help='output file')

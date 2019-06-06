@@ -2,7 +2,7 @@ import os
 from setuptools import setup
 import sys
 
-requires = ['bin-parser==0.0.13']
+requires = ['bin-parser==1.0.1']
 
 # Python 2.6 does not include the argparse module.
 try:

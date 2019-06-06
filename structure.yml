@@ -1,11 +1,11 @@
 ---
 - name: source
-  type: trim
+  type: t_trim
 - name: name
 - name: id_number
 - name: family_drawn_by
 - name: number_of_members
-  type: int
+  type: s_short
 - name: # last_internal_id
   size: 2
 - name: disease_loci
@@ -13,16 +13,16 @@
   structure:
     - name: name
     - name: colour
-      type: colour
+      type: t_colour
     - name:
     - name: pattern
-      type: pattern
+      type: t_pattern
 - name: comments
-  type: comment
+  type: t_comment
 - name: creation_date
-  type: date
+  type: t_date
 - name: last_updated
-  type: date
+  type: t_date
 - name:
   size: 5
 - name: quantitative_value_loci
@@ -30,7 +30,7 @@
   structure:
     - name: name
 - name: selected_id
-  type: int
+  type: s_short
 - name:
   size: 7
 - name: markers
@@ -42,7 +42,7 @@
     term: marker_term
   structure:
     - name: separator
-      type: short
+      type: u_char
     - name:
       size: 439
 - name:
@@ -64,60 +64,60 @@
         - name: p_g_mother
         - name: p_g_father
     - name: address
-      type: comment
+      type: t_comment
     - name: additional_information
-      type: comment
+      type: t_comment
     - name: date_of_birth
-      type: date
+      type: t_date
     - name: date_of_death
-      type: date
+      type: t_date
     - name: sex
-      type: sex
+      type: t_sex
     - name: id
-      type: int
+      type: s_short
     - name: pedigree_number
-      type: int
+      type: s_short
     - name: mother_id
-      type: int
+      type: s_short
     - name: father_id
-      type: int
+      type: s_short
     - name: internal_id # Remove?
-      type: int
+      type: s_short
     - name: number_of_individuals
-      type: int
+      type: s_short
     - name: age_gestation
     - name: individual_id
     - name: number_of_spouses
-      type: int
+      type: s_short
     - name: spouses
       for: number_of_spouses
       structure:
         - name: id
-          type: int
+          type: s_short
         - name: flags
-          type: relationship
+          type: t_relationship
         - name: name
     - name: twin_id
-      type: int
+      type: s_short
     - name: comment
-      type: comment
+      type: t_comment
     - name: adoption_type
-      type: adoption_type
+      type: t_adoption_type
     - name: genetic_symbols
-      type: genetic_symbol
+      type: t_genetic_symbol
     - name:
     - name: flags
-      type: individual
+      type: t_individual
     - name: proband
-      type: proband
+      type: t_proband
     - name: x_coordinate
-      type: int
+      type: s_short
     - name: y_coordinate
-      type: int
+      type: s_short
     - name: annotation_1
-      type: annotation_1
+      type: t_annotation_1
     - name: multiple_pregnancies
-      type: multiple_pregnancies
+      type: t_multiple_pregnancies
     - name:
     - name: crossover
       for: 2
@@ -133,7 +133,7 @@
             term: crossover_term
           structure:
             - name: separator
-              type: short
+              type: u_char
             - name:
               size: 11
         - name:
@@ -146,9 +146,9 @@
         - name:
           size: 24
     - name: annotation_2
-      type: annotation_2
+      type: t_annotation_2
     - name: additional_symbols
-      type: short
+      type: u_char
     # NOTE: DNA and BLOOD fields are switched in Cyrillic. i.e., if DNA is
     # selected, the BLOOD_LOCATION field is stored and if BLOOD is
     # selected, the DNA_LOCATION field is stored. This is probably a bug.
@@ -165,7 +165,7 @@
         operands:
           - cells
     - name: sample
-      type: sample
+      type: t_sample
     - name: sample_number
     - name: # colour
       size: 3
@@ -174,7 +174,7 @@
     - name: # pattern
       size: 2
 - name: number_of_unknown_data
-  type: int
+  type: s_short
 - name:
 - name: unknown_data
   for: number_of_unknown_data
@@ -182,7 +182,7 @@
     - name:
       size: 12
 - name: number_of_custom_descriptions
-  type: int
+  type: s_short
 - name: genetic_symbols
   for: 19
   structure:
@@ -199,7 +199,7 @@
 - name:
   size: 14
 - name: zoom
-  type: int
+  type: s_short
 - name: unknown_1 # Zoom.
   type: raw
   size: 4
@@ -209,7 +209,7 @@
 - name:
   size: 20
 - name: number_of_text_fields
-  type: int
+  type: s_short
 # TODO: x and y coordinates have more digits.
 - name: text
   for: number_of_text_fields
@@ -218,12 +218,12 @@
     - name:
       size: 54
     - name: x_coordinate
-      type: short
+      type: u_char
     - name:
       size: 3
     - name: y_coordinate
-      type: short
+      type: u_char
     - name:
       size: 7
 - name: eof_marker
-  type: trim
+  type: t_trim
