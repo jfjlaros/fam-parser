@@ -24,15 +24,47 @@
 - name: last_updated
   type: t_date
 - name:
-  size: 5
-- name: quantitative_value_loci
-  for: 7
+  size: 1
+- name: highest_marker_chromosome
+  type: s_char
+- name: number_of_family_marker_lists
+  type: s_char
+- name: family_marker_lists
+  for: number_of_family_marker_lists
   structure:
-    - name: name
+    # The value of highest_marker_chromosome is used if the following condition
+    # is false.
+    - name: marker_chromosome
+      type: s_char
+      if:
+        operands:
+          - number_of_family_marker_lists
+          - 1
+        operator: gt
+    - name: number_of_family_markers
+      type: s_char
+    - name: family_markers
+      for: number_of_family_markers
+      structure:
+        - name:
+          size: 2
+        - name: name
+        - name: show
+          type: bool
+        - name:
+          size: 1
+        - name: marker_type
+          type: t_marker_type
+        - name: colour
+          type: t_colour
+    - name:
+      size: 1
+- name:
+  size: 8
 - name: selected_id
   type: s_short
 - name:
-  size: 7
+  size: 8
 - name: markers
   while:
     operands:

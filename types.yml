@@ -3,6 +3,11 @@ constants:
   crossover_delimiter: 0x22
   marker_delimiter: 0x01
 types:
+  bool:
+    function:
+      name: struct
+      args:
+        fmt: 'B'
   t_additional_symbol:
     function:
       name: struct
@@ -105,6 +110,18 @@ types:
           0x08: hide_info
           0x10: committed_suicide
           0x20: cells
+  t_marker_type:
+    function:
+      name: struct
+      args:
+        fmt: 'B'
+        annotation:
+          0x00: allele_and_phenotype_names_alterable
+          0x01: system_shows_dominance
+          0x03: numbered_alleles
+          0x04: oxford_allele_description
+          0x05: VNTR
+          0x07: allele_names_alterable
   t_multiple_pregnancies:
     function:
       name: struct
@@ -169,6 +186,18 @@ types:
           0x00: male
           0x01: female
           0x02: unknown
+  le_float:
+    size: 4
+    function:
+      name: struct
+      args:
+        fmt: '<f'
+  s_char:
+    size: 1
+    function:
+      name: struct
+      args:
+        fmt: 'b'
   s_short:
     size: 2
     function:

@@ -1,0 +1,38 @@
+---
+- name: source
+  type: t_trim
+- name: number_of_markers
+  type: s_short
+- name: name
+- name: number_of_alleles
+  type: s_short
+- name: number_of_factors
+  type: s_short
+- name: number_of_phenotypes
+  type: s_short
+- name: marker_type
+  type: t_marker_type
+- name:
+  size: 4
+- name: chromosome_band
+- name: relative_chromosome_position
+  type: s_short
+- name: mc_kusick_number
+- name: probe_name
+- name: enzyme_used
+- name: comment
+- name: unknown_text
+- name: alleles
+  for: number_of_alleles
+  structure:
+    - name: name
+    - name: frequency
+      type: le_float
+    - name: number
+      type: s_short
+- name: phenotypes
+  for: number_of_phenotypes
+  structure:
+    - name: name
+    - name: factors
+      type: s_short
